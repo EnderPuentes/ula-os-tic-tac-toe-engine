@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "name": "tictactoe-engine",
+  "description": "A simple multiplayer game engine for Tic Tac Toe",
+  "author": "Ender Puentes <endpuent@gmail.com>",
+  "keywords": ["game", "engine", "socket.io", "typescript", "nodejs", "multiplayer", "multiplayer-game", "multiplayer-game-engine"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "nodemon --watch 'server/**/*.ts' --exec 'ts-node -r tsconfig-paths/register' server/main.ts",
+    "start": "node -r tsconfig-paths/register dist/server/main.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "http": "0.0.1-security",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "nodemon": "^3.0.2",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": "22.x",
+    "pnpm": "10.x"
+  },
+  "packageManager": "pnpm@10.8.0",
+  "main": "dist/server/main.js"
+}
