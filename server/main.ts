@@ -35,6 +35,9 @@ io.on("connection", (socket) => {
       id: crypto.randomUUID(),
       name: roomName,
       players: [],
+      chat: {
+        messages: [],
+      },
     };
 
     rooms.push(newRoom);
@@ -92,6 +95,73 @@ io.on("connection", (socket) => {
     io.emit("room", room);
   });
 
+  socket.on("send-message", (roomId: string, message: string) => {
+    const room = rooms.find((room) => room.id === roomId);
+    if (!room) {
+      logger(`Room ${roomId} not found`, "warn");
+      io.emit("error", "Room not found");
+      return;
+    }
+
+    const player = players.find((player) => player.id === socket.id);
+    if (!player) {
+      logger(`Player ${socket.id} not found`, "warn");
+      io.emit("error", "Player not found");
+      return;
+    }
+
+    logger(`Player ${player.name} sent message: ${message}`, "info");
+
+    room?.chat.messages.push({
+      content: message,
+      sender: player,
+      timestamp: Date.now(),
+    });
+
+    io.emit("room", room);
+  });
+
+  socket.on("user-typing-on", (roomId: string) => {
+    const room = rooms.find((room) => room.id === roomId);
+
+    if (!room) {
+      logger(`Room ${roomId} not found`, "warn");
+      io.emit("error", "Room not found");
+      return;
+    }
+
+    const player = room.players.find((player) => player.id === socket.id);
+
+    if (!player) {
+      logger(`Player ${socket.id} not found in room ${roomId}`, "warn");
+      io.emit("error", "Player not found in room");
+      return;
+    }
+
+    logger(`Player ${player.name} started typing`, "info");
+    io.emit("player-typing", player);
+  });
+
+  socket.on("user-typing-off", (roomId: string) => {
+    const room = rooms.find((room) => room.id === roomId);
+    if (!room) {
+      logger(`Room ${roomId} not found`, "warn");
+      io.emit("error", "Room not found");
+      return;
+    }
+
+    const player = room.players.find((player) => player.id === socket.id);
+
+    if (!player) {
+      logger(`Player ${socket.id} not found in room ${roomId}`, "warn");
+      io.emit("error", "Player not found in room");
+      return;
+    }
+
+    logger(`Player ${player.name} stopped typing`, "info");
+    io.emit("player-typing", null);
+  });
+
   socket.on("disconnect", () => {
     logger(`Player disconnected: ${socket.id}`, "warn");
     // Remove player from players array
@@ -100,8 +170,12 @@ io.on("connection", (socket) => {
     players.push(...updatedPlayers);
     io.emit("players", players);
 
-    // Remove player from rooms
-    const updatedRooms = rooms.filter((room) => room.id !== socket.id);
+    // Remove player from rooms that have no players
+    const updatedRooms = rooms.filter(
+      (room) =>
+        room.players.some((player) => player.id !== socket.id) &&
+        room.players.length > 0
+    );
     rooms.length = 0;
     rooms.push(...updatedRooms);
     io.emit("rooms", rooms);
