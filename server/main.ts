@@ -16,7 +16,7 @@ io.on("connection", (socket) => {
     const newPlayer = {
       id: socket.id,
       name: playerName,
-      avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=${playerName}`,
+      avatar: `https://api.dicebear.com/8.x/fun-emoji/svg?seed=${playerName}&backgroundType=gradientLinear&mouth=cute,kissHeart,lilSmile,smileLol,smileTeeth,tongueOut,wideSmile`,
     };
 
     players.push(newPlayer);
