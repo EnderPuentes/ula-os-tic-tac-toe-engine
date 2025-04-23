@@ -1,184 +1,233 @@
-import { Player, Room } from "@/lib/types";
-import { logger } from "@/lib/utils";
+import crypto from "crypto";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { Worker } from "worker_threads";
+import type { Message, Player, Room } from "./lib/types";
+import { getAvatarUrl, logger } from "./lib/utils";
 
 const httpServer = createServer();
-const io = new Server(httpServer, { cors: { origin: "*" } });
+const io = new Server(httpServer, {
+  cors: { origin: "*" },
+});
 
-const players: Player[] = [];
-const rooms: Room[] = [];
+const players = new Map<string, Player>();
+const rooms = new Map<string, Worker>();
 
 io.on("connection", (socket) => {
-  logger(`New client connected: ${socket.id}`, "success");
+  logger("Client connected", "info");
 
   socket.on("create-player", (playerName: string) => {
-    const newPlayer = {
-      id: socket.id,
+    const playerId = socket.id;
+
+    players.set(playerId, {
+      id: playerId,
       name: playerName,
-      avatar: `https://api.dicebear.com/8.x/fun-emoji/svg?seed=${playerName}&backgroundType=gradientLinear&mouth=cute,kissHeart,lilSmile,smileLol,smileTeeth,tongueOut,wideSmile`,
-    };
+      avatar: getAvatarUrl(playerName),
+    });
 
-    players.push(newPlayer);
-
-    io.emit("players", players);
-    logger(`Player ${newPlayer.name} created`, "success");
-  });
-
-  socket.on("get-players", () => {
-    logger("Getting players", "info");
-    io.emit("players", players);
+    logger(`Player created: ${playerName}`, "success");
+    io.emit("player-created", playerId);
   });
 
   socket.on("create-room", (roomName: string) => {
-    const newRoom = {
-      id: crypto.randomUUID(),
-      name: roomName,
-      players: [],
-      chat: {
-        messages: [],
-      },
-    };
+    const roomId = crypto.randomUUID();
 
-    rooms.push(newRoom);
-
-    io.emit("rooms", rooms);
-    logger(`Room ${newRoom.name} created`, "success");
-  });
-
-  socket.on("get-rooms", () => {
-    logger("Getting rooms", "info");
-    io.emit("rooms", rooms);
-  });
-
-  // Join player to room
-  socket.on("join-player-to-room", (roomId: string) => {
-    // Check if room exists
-    const room = rooms.find((room) => room.id === roomId);
-    if (!room) {
-      logger(`Room ${roomId} not found`, "warn");
-      io.emit("error", "Room not found");
-      return;
-    }
-
-    // Check if room is full
-    if (room.players.length >= 2) {
-      logger(`Room ${roomId} is full`, "warn");
-      io.emit("error", "Room is full");
-      return;
-    }
-
-    // Check if player exists
-    const player = players.find((player) => player.id === socket.id);
-    if (!player) {
-      logger(`Player ${socket.id} not found`, "warn");
-      io.emit("error", "Player not found");
-      return;
-    }
-    // Check if player is already in room
-    if (room.players.some((p) => p.id === socket.id)) {
-      logger(`Player ${socket.id} already in room ${roomId}`, "warn");
-      io.emit("error", "Player already in room");
-      return;
-    }
-
-    // Add player to room
-    room.players.push(player);
-
-    logger(`Player ${socket.id} joined room ${roomId}`, "success");
-    io.emit("success", `Player ${player.name} joined room ${room.name}`);
-    io.emit("rooms", rooms);
-  });
-
-  socket.on("get-room", (roomId: string) => {
-    const room = rooms.find((room) => room.id === roomId);
-    io.emit("room", room);
-  });
-
-  socket.on("send-message", (roomId: string, message: string) => {
-    const room = rooms.find((room) => room.id === roomId);
-    if (!room) {
-      logger(`Room ${roomId} not found`, "warn");
-      io.emit("error", "Room not found");
-      return;
-    }
-
-    const player = players.find((player) => player.id === socket.id);
-    if (!player) {
-      logger(`Player ${socket.id} not found`, "warn");
-      io.emit("error", "Player not found");
-      return;
-    }
-
-    logger(`Player ${player.name} sent message: ${message}`, "info");
-
-    room?.chat.messages.push({
-      content: message,
-      sender: player,
-      timestamp: Date.now(),
+    const worker = new Worker("./src/workers/room.ts", {
+      workerData: {
+        id: roomId,
+        name: roomName,
+        players: [],
+        chat: { messages: [], playersTyping: [] },
+      } as Room,
+      execArgv: ["-r", "ts-node/register"],
     });
 
-    io.emit("room", room);
+    rooms.set(roomId, worker);
+    logger(`Room created: ${roomName}`, "success");
+    io.emit("room-created", roomId);
   });
 
-  socket.on("user-typing-on", (roomId: string) => {
-    const room = rooms.find((room) => room.id === roomId);
-
-    if (!room) {
-      logger(`Room ${roomId} not found`, "warn");
-      io.emit("error", "Room not found");
-      return;
-    }
-
-    const player = room.players.find((player) => player.id === socket.id);
-
-    if (!player) {
-      logger(`Player ${socket.id} not found in room ${roomId}`, "warn");
-      io.emit("error", "Player not found in room");
-      return;
-    }
-
-    logger(`Player ${player.name} started typing`, "info");
-    io.emit("player-typing", player);
+  socket.on("get-players", async () => {
+    const playersData = Array.from(players.values());
+    logger(`Players fetched: ${playersData.length}`, "info");
+    io.emit("players", playersData);
   });
 
-  socket.on("user-typing-off", (roomId: string) => {
-    const room = rooms.find((room) => room.id === roomId);
-    if (!room) {
-      logger(`Room ${roomId} not found`, "warn");
-      io.emit("error", "Room not found");
+  socket.on("get-rooms", async () => {
+    const dataPromises = Array.from(rooms.values()).map(
+      (worker) =>
+        new Promise<Room>((resolve) => {
+          const onMessage = (data: Room) => {
+            resolve(data);
+            worker.off("message", onMessage);
+          };
+          worker.on("message", onMessage);
+          worker.postMessage("get-room-data");
+        })
+    );
+
+    const roomsData = await Promise.all(dataPromises);
+    io.emit("rooms", roomsData);
+  });
+
+  socket.on("get-room", async (roomId: string) => {
+    logger(`Getting room ${roomId}`, "info");
+
+    const roomWorker = rooms.get(roomId);
+    if (!roomWorker) {
+      logger(`Room not found`, "error");
       return;
     }
 
-    const player = room.players.find((player) => player.id === socket.id);
+    const roomData: Room = await new Promise((resolve) => {
+      const onMessage = (data: Room) => {
+        resolve(data);
+        roomWorker.off("message", onMessage);
+      };
+      roomWorker.on("message", onMessage);
+      roomWorker.postMessage("get-room-data");
+    });
 
+    logger(`Room data fetched ${roomData.name}`, "info");
+    socket.emit("room", roomData);
+  });
+
+  socket.on("join-player-to-room", (roomId: string) => {
+    // Check if player is in room
+    const player = players.get(socket.id);
     if (!player) {
-      logger(`Player ${socket.id} not found in room ${roomId}`, "warn");
-      io.emit("error", "Player not found in room");
+      logger(`Player not found`, "error");
       return;
     }
 
-    logger(`Player ${player.name} stopped typing`, "info");
-    io.emit("player-typing", null);
+    // Check if room exists
+    const roomWorker = rooms.get(roomId);
+    if (!roomWorker) {
+      logger(`Room not found`, "error");
+      return;
+    }
+
+    // Join player to room
+    roomWorker.postMessage({
+      type: "join-player",
+      player,
+    });
+
+    // Listen for messages from room worker
+    roomWorker.on("message", (message) => {
+      if (message.type === "player-joined") {
+        logger(`Player joined room ${roomId}`, "success");
+        io.emit("player-joined", message.player.id);
+      }
+
+      if (message.type === "room-full") {
+        logger(`Room ${roomId} is full`, "warn");
+        socket.emit("room-full", roomId);
+      }
+    });
+  });
+
+  socket.on("send-message-to-room", (roomId: string, message: string) => {
+    logger(`Sending message to room ${roomId}`, "info");
+
+    // Check if player is in room
+    const player = players.get(socket.id);
+    if (!player) {
+      logger(`Player not found`, "error");
+      return;
+    }
+
+    // Check if room exists
+    const roomWorker = rooms.get(roomId);
+    if (!roomWorker) {
+      logger(`Room not found`, "error");
+      return;
+    }
+
+    roomWorker.postMessage({
+      type: "send-message",
+      message: {
+        content: message,
+        sender: player,
+        timestamp: Date.now(),
+      } as Message,
+    });
+
+    // Listen for messages from room worker
+    roomWorker.on("message", (message) => {
+      if (message.type === "message-sent") {
+        logger(`Message sent to room ${roomId}`, "success");
+        io.emit("message-sent", message.message);
+      }
+    });
+  });
+
+  socket.on("player-typing-on-in-chat-of-room", (roomId: string) => {
+    // Check if player is in room
+    const player = players.get(socket.id);
+    if (!player) {
+      logger(`Player not found`, "error");
+      return;
+    }
+
+    // Check if room exists
+    const roomWorker = rooms.get(roomId);
+    if (!roomWorker) {
+      logger(`Room not found`, "error");
+      return;
+    }
+
+    // Send message to room worker
+    roomWorker.postMessage({
+      type: "player-typing-on-in-chat",
+      player,
+    });
+
+    // Listen for messages from room worker
+    roomWorker.on("message", (message) => {
+      if (message.type === "add-player-typing-in-chat-of-room") {
+        logger(`Player typing on in chat of room ${roomId}`, "success");
+        io.emit("add-player-typing-in-chat-of-room", message.player);
+      }
+    });
+  });
+
+  socket.on("player-typing-off-in-chat-of-room", (roomId: string) => {
+    // Check if player is in room
+    const player = players.get(socket.id);
+    if (!player) {
+      logger(`Player not found`, "error");
+      return;
+    }
+
+    // Check if room exists
+    const roomWorker = rooms.get(roomId);
+    if (!roomWorker) {
+      logger(`Room not found`, "error");
+      return;
+    }
+
+    // Send message to room worker
+    roomWorker.postMessage({
+      type: "player-typing-off-in-chat",
+      player,
+    });
+
+    // Listen for messages from room worker
+    roomWorker.on("message", (message) => {
+      if (message.type === "remove-player-typing-in-chat-of-room") {
+        logger(`Player typing off in chat of room ${roomId}`, "success");
+        io.emit("remove-player-typing-in-chat-of-room", message.player);
+      }
+    });
   });
 
   socket.on("disconnect", () => {
     logger(`Player disconnected: ${socket.id}`, "warn");
-    // Remove player from players array
-    const updatedPlayers = players.filter((player) => player.id !== socket.id);
-    players.length = 0;
-    players.push(...updatedPlayers);
-    io.emit("players", players);
-
-    // Remove player from rooms that have no players
-    const updatedRooms = rooms.filter(
-      (room) =>
-        room.players.some((player) => player.id !== socket.id) &&
-        room.players.length > 0
-    );
-    rooms.length = 0;
-    rooms.push(...updatedRooms);
-    io.emit("rooms", rooms);
+    players.delete(socket.id);
+    const playersData = Array.from(players.values());
+    logger(`Players fetched: ${playersData.length}`, "info");
+    io.emit("players", playersData);
   });
 });
 

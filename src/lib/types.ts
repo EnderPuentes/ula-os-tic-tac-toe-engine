@@ -5,6 +5,7 @@ export type Player = {
 };
 
 export type Chat = {
+  playersTyping: Player[];
   messages: Message[];
 };
 
