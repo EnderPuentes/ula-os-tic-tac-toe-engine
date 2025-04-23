@@ -9,10 +9,10 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["server/*"]
+      "@/*": ["./src/*"]
     }
   },
 
-  "include": ["server/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules"]
 }
