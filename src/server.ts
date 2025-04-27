@@ -48,7 +48,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("get-players", async () => {
-    const playersData = Array.from(players.values());
+    const playersData: Player[] = Array.from(players.values());
     logger(`Players fetched: ${playersData.length}`, "info");
     io.emit("players", playersData);
   });
@@ -73,7 +73,7 @@ io.on("connection", (socket) => {
   socket.on("get-room", async (roomId: string) => {
     logger(`Getting room ${roomId}`, "info");
 
-    const roomWorker = rooms.get(roomId);
+    const roomWorker: Worker | undefined = rooms.get(roomId);
     if (!roomWorker) {
       logger(`Room not found`, "error");
       return;
@@ -94,14 +94,14 @@ io.on("connection", (socket) => {
 
   socket.on("join-player-to-room", (roomId: string) => {
     // Check if player is in room
-    const player = players.get(socket.id);
+    const player: Player | undefined = players.get(socket.id);
     if (!player) {
       logger(`Player not found`, "error");
       return;
     }
 
     // Check if room exists
-    const roomWorker = rooms.get(roomId);
+    const roomWorker: Worker | undefined = rooms.get(roomId);
     if (!roomWorker) {
       logger(`Room not found`, "error");
       return;
@@ -131,14 +131,14 @@ io.on("connection", (socket) => {
     logger(`Sending message to room ${roomId}`, "info");
 
     // Check if player is in room
-    const player = players.get(socket.id);
+    const player: Player | undefined = players.get(socket.id);
     if (!player) {
       logger(`Player not found`, "error");
       return;
     }
 
     // Check if room exists
-    const roomWorker = rooms.get(roomId);
+    const roomWorker: Worker | undefined = rooms.get(roomId);
     if (!roomWorker) {
       logger(`Room not found`, "error");
       return;
@@ -164,7 +164,7 @@ io.on("connection", (socket) => {
 
   socket.on("player-typing-on-in-chat-of-room", (roomId: string) => {
     // Check if player is in room
-    const player = players.get(socket.id);
+    const player: Player | undefined = players.get(socket.id);
     if (!player) {
       logger(`Player not found`, "error");
       return;
@@ -194,14 +194,14 @@ io.on("connection", (socket) => {
 
   socket.on("player-typing-off-in-chat-of-room", (roomId: string) => {
     // Check if player is in room
-    const player = players.get(socket.id);
+    const player: Player | undefined = players.get(socket.id);
     if (!player) {
       logger(`Player not found`, "error");
       return;
     }
 
     // Check if room exists
-    const roomWorker = rooms.get(roomId);
+    const roomWorker: Worker | undefined = rooms.get(roomId);
     if (!roomWorker) {
       logger(`Room not found`, "error");
       return;
