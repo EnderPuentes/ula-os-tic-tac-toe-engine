@@ -31,30 +31,51 @@ export type Room = {
   maxPlayers: number;
 };
 
-export type WorkerMessageSend = {
+type PlayerAndRoomId = {
+  roomId: string;
+  player: Player;
+};
+
+export type PlayerJoined = PlayerAndRoomId;
+export type PlayerAlreadyInRoom = PlayerAndRoomId;
+export type PlayerLeft = PlayerAndRoomId;
+export type PlayerTypingOnInChatOfRoom = PlayerAndRoomId;
+export type PlayerTypingOffInChatOfRoom = PlayerAndRoomId;
+
+export type MessageSent = {
+  roomId: string;
+  message: Message;
+};
+
+export type WorkerMessageInput = {
   type:
-    | "get"
+    | "get-data"
     | "join-player"
     | "leave-player"
     | "send-message"
-    | "player-typing-on-in-chat"
-    | "player-typing-off-in-chat";
+    | "player-typing-on-in-chat-of-room"
+    | "player-typing-off-in-chat-of-room";
   data: Message | Player | Room | null;
 };
 
-export type WorkerMessageReceive = {
+export type WorkerMessageOutput = {
   type:
+    | "data"
     | "player-joined"
     | "player-left"
     | "player-already-in-room"
     | "room-full"
     | "message-sent"
-    | "emit-player-typing-in-chat-of-room"
-    | "emit-player-typing-off-in-chat-of-room";
+    | "player-typing-on-in-chat-of-room"
+    | "player-typing-off-in-chat-of-room";
   data:
     | Room
     | Player
     | Message
-    | { roomId: string; player: Player }
-    | { roomId: string; message: Message };
+    | PlayerJoined
+    | PlayerAlreadyInRoom
+    | PlayerLeft
+    | PlayerTypingOnInChatOfRoom
+    | PlayerTypingOffInChatOfRoom
+    | MessageSent;
 };

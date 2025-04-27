@@ -10,10 +10,14 @@ import { Server } from "socket.io";
 import { Worker } from "worker_threads";
 import type {
   Message,
+  MessageSent,
   Player,
+  PlayerJoined,
+  PlayerTypingOffInChatOfRoom,
+  PlayerTypingOnInChatOfRoom,
   Room,
-  WorkerMessageReceive,
-  WorkerMessageSend,
+  WorkerMessageInput,
+  WorkerMessageOutput,
 } from "./lib/types";
 import { getAvatarUrl, logger } from "./lib/utils";
 
@@ -77,7 +81,7 @@ io.on("connection", (socket) => {
     if (rooms.has(roomId)) {
       // Emit room created error
       logger(`Room already exists`, "error");
-      io.emit("room-created-error", "Room already exists");
+      io.emit("create-room-error", "Room already exists");
       return;
     }
 
@@ -107,7 +111,8 @@ io.on("connection", (socket) => {
 
     // Emit room created
     logger(`Room created: ${roomName}`, "success");
-    io.emit("room-created", roomId);
+    console.log("rooms", rooms.size);
+    io.emit("create-room-success", roomId);
   });
 
   /**
@@ -135,6 +140,7 @@ io.on("connection", (socket) => {
    * Returns list of all active game rooms
    */
   socket.on("get-rooms", async () => {
+    logger(`Getting rooms`, "info");
     // Check if there are no rooms
     if (rooms.size === 0) {
       // Emit empty rooms data
@@ -145,21 +151,23 @@ io.on("connection", (socket) => {
       const dataPromises = Array.from(rooms.values()).map(
         (worker) =>
           new Promise<Room>((resolve) => {
+            // Send message to worker
+            const messageInput: WorkerMessageInput = {
+              type: "get-data",
+              data: null,
+            };
+
+            // Send message to worker
+            worker.postMessage(messageInput);
+
             // On message
-            const onMessage = (messageReceive: WorkerMessageReceive) => {
-              resolve(messageReceive.data as Room);
+            const onMessage = (messageOutput: WorkerMessageOutput) => {
+              resolve(messageOutput.data as Room);
               worker.off("message", onMessage);
             };
 
             // Listen for messages
             worker.on("message", onMessage);
-
-            // Send message to worker
-            const messageSend: WorkerMessageSend = {
-              type: "get",
-              data: null,
-            };
-            worker.postMessage(messageSend);
           })
       );
 
@@ -191,21 +199,23 @@ io.on("connection", (socket) => {
 
     // Get room data from worker
     const roomData: Room | undefined = await new Promise((resolve) => {
+      // Send message to worker
+      const messageInput: WorkerMessageInput = {
+        type: "get-data",
+        data: null,
+      };
+
+      // Send message to worker
+      roomWorker.postMessage(messageInput);
+
       // On message
-      const onMessage = (messageReceive: WorkerMessageReceive) => {
-        resolve(messageReceive.data as Room);
+      const onMessage = (messageOutput: WorkerMessageOutput) => {
+        resolve(messageOutput.data as Room);
         roomWorker.off("message", onMessage);
       };
 
       // Listen for messages
       roomWorker.on("message", onMessage);
-
-      // Send message to worker
-      const messageSend: WorkerMessageSend = {
-        type: "get",
-        data: null,
-      };
-      roomWorker.postMessage(messageSend);
     });
 
     if (roomData) {
@@ -244,51 +254,45 @@ io.on("connection", (socket) => {
     }
 
     // Join player to room
-    const messageSend: WorkerMessageSend = {
+    const messageInput: WorkerMessageInput = {
       type: "join-player",
       data: player,
     };
-    roomWorker.postMessage(messageSend);
+
+    // Send message to room worker
+    roomWorker.postMessage(messageInput);
+
+    // On message
+    const onMessage = (messageOutput: WorkerMessageOutput) => {
+      const room: Room = messageOutput.data as Room;
+      const playerJoined: PlayerJoined = messageOutput.data as PlayerJoined;
+
+      if (messageOutput.type === "player-joined") {
+        // Emit player joined
+        logger(`Player joined room ${roomId}`, "success");
+        io.emit("player-joined-to-room-success", playerJoined.player.id);
+      } else if (messageOutput.type === "room-full") {
+        // Emit room full
+        logger(`Room ${roomId} is full`, "warn");
+        socket.emit(
+          "player-joined-to-room-error",
+          `Room ${roomId} is full, max players: ${room.maxPlayers}`
+        );
+      } else if (messageOutput.type === "player-already-in-room") {
+        // Emit player already in room
+        logger(`Player already in room ${roomId}`, "warn");
+        socket.emit(
+          "player-joined-to-room-error",
+          `Player ${player.id} already in room ${roomId}`
+        );
+      }
+
+      // Remove listener
+      roomWorker.off("message", onMessage);
+    };
 
     // Listen for messages from room worker
-    roomWorker.on("message", (messageReceive: WorkerMessageReceive) => {
-      const room: Room = messageReceive.data as Room;
-
-      switch (messageReceive.type) {
-        case "room-full":
-          // Emit room full
-          logger(`Room ${roomId} is full`, "warn");
-          socket.emit(
-            "player-joined-to-room-error",
-            `Room ${roomId} is full, max players: ${room.maxPlayers}`
-          );
-          break;
-
-        case "player-already-in-room":
-          // Emit player already in room
-          logger(`Player already in room ${roomId}`, "warn");
-          socket.emit(
-            "player-joined-to-room-error",
-            `Player ${player.id} already in room ${roomId}`
-          );
-          break;
-
-        case "player-joined":
-          // Emit player joined
-          logger(`Player joined room ${roomId}`, "success");
-          const playerJoined: Player = messageReceive.data as Player;
-          io.emit("player-joined-to-room-success", playerJoined.id);
-          break;
-
-        default:
-          logger(`Unknown message from room worker`, "error");
-          io.emit(
-            "player-joined-to-room-error",
-            `Unknown message from room worker`
-          );
-          break;
-      }
-    });
+    roomWorker.on("message", onMessage);
   });
 
   /**
@@ -319,7 +323,7 @@ io.on("connection", (socket) => {
     }
 
     // Send message to room worker
-    const messageSend: WorkerMessageSend = {
+    const messageInput: WorkerMessageInput = {
       type: "send-message",
       data: {
         content: message,
@@ -329,16 +333,23 @@ io.on("connection", (socket) => {
     };
 
     // Send message to room worker
-    roomWorker.postMessage(messageSend);
+    roomWorker.postMessage(messageInput);
+
+    // On message
+    const onMessage = (messageOutput: WorkerMessageOutput) => {
+      const messageSent: MessageSent = messageOutput.data as MessageSent;
+      if (messageOutput.type === "message-sent") {
+        // Emit message sent
+        logger(`Message sent to room ${messageSent.roomId}`, "success");
+        io.emit("message-sent", messageSent.message);
+      }
+
+      // Remove listener
+      roomWorker.off("message", onMessage);
+    };
 
     // Listen for messages from room worker
-    roomWorker.on("message", (messageReceive: WorkerMessageReceive) => {
-      if (messageReceive.type === "message-sent") {
-        // Emit message sent
-        logger(`Message sent to room ${roomId}`, "success");
-        io.emit("message-sent", messageReceive.data);
-      }
-    });
+    roomWorker.on("message", onMessage);
   });
 
   /**
@@ -372,22 +383,34 @@ io.on("connection", (socket) => {
     }
 
     // Create message to send to room worker
-    const messageSend: WorkerMessageSend = {
-      type: "player-typing-on-in-chat",
+    const messageInput: WorkerMessageInput = {
+      type: "player-typing-on-in-chat-of-room",
       data: player,
     };
 
     // Send message to room worker
-    roomWorker.postMessage(messageSend);
+    roomWorker.postMessage(messageInput);
+
+    // On message
+    const onMessage = (messageOutput: WorkerMessageOutput) => {
+      const playerTypingOn: PlayerTypingOnInChatOfRoom =
+        messageOutput.data as PlayerTypingOnInChatOfRoom;
+
+      if (messageOutput.type === "player-typing-on-in-chat-of-room") {
+        // Emit player typing on in chat of room
+        logger(
+          `Player typing on in chat of room ${playerTypingOn.roomId}`,
+          "success"
+        );
+        io.emit(
+          "player-typing-on-in-chat-of-room-success",
+          playerTypingOn.player
+        );
+      }
+    };
 
     // Listen for messages from room worker
-    roomWorker.on("message", (messageReceive: WorkerMessageReceive) => {
-      if (messageReceive.type === "emit-player-typing-in-chat-of-room") {
-        // Emit player typing on in chat of room
-        logger(`Player typing on in chat of room ${roomId}`, "success");
-        io.emit("add-player-typing-in-chat-of-room", messageReceive.data);
-      }
-    });
+    roomWorker.on("message", onMessage);
   });
 
   /**
@@ -399,7 +422,7 @@ io.on("connection", (socket) => {
     // Check if player is in room
     const player: Player | undefined = players.get(socket.id);
     if (!player) {
-      // Emit player typing off in chat of room error
+      // Emit player typing on in chat of room error
       logger(`Player not found`, "error");
       io.emit(
         "player-typing-off-in-chat-of-room-error",
@@ -409,9 +432,9 @@ io.on("connection", (socket) => {
     }
 
     // Check if room exists
-    const roomWorker: Worker | undefined = rooms.get(roomId);
+    const roomWorker = rooms.get(roomId);
     if (!roomWorker) {
-      // Emit player typing off in chat of room error
+      // Emit player typing on in chat of room error
       logger(`Room not found`, "error");
       io.emit(
         "player-typing-off-in-chat-of-room-error",
@@ -421,22 +444,34 @@ io.on("connection", (socket) => {
     }
 
     // Create message to send to room worker
-    const messageSend: WorkerMessageSend = {
-      type: "player-typing-off-in-chat",
+    const messageInput: WorkerMessageInput = {
+      type: "player-typing-off-in-chat-of-room",
       data: player,
     };
 
     // Send message to room worker
-    roomWorker.postMessage(messageSend);
+    roomWorker.postMessage(messageInput);
+
+    // On message
+    const onMessage = (messageOutput: WorkerMessageOutput) => {
+      const playerTypingOff: PlayerTypingOffInChatOfRoom =
+        messageOutput.data as PlayerTypingOffInChatOfRoom;
+
+      if (messageOutput.type === "player-typing-off-in-chat-of-room") {
+        // Emit player typing off in chat of room
+        logger(
+          `Player typing off in chat of room ${playerTypingOff.roomId}`,
+          "success"
+        );
+        io.emit(
+          "player-typing-off-in-chat-of-room-success",
+          playerTypingOff.player
+        );
+      }
+    };
 
     // Listen for messages from room worker
-    roomWorker.on("message", (messageReceive: WorkerMessageReceive) => {
-      if (messageReceive.type === "emit-player-typing-off-in-chat-of-room") {
-        // Emit player typing off in chat of room
-        logger(`Player typing off in chat of room ${roomId}`, "success");
-        io.emit("remove-player-typing-in-chat-of-room", messageReceive.data);
-      }
-    });
+    roomWorker.on("message", onMessage);
   });
 
   /**
@@ -471,8 +506,8 @@ io.on("connection", (socket) => {
       (worker) =>
         new Promise<Room>((resolve) => {
           // On message
-          const onMessage = (messageReceive: WorkerMessageReceive) => {
-            resolve(messageReceive.data as Room);
+          const onMessage = (messageOutput: WorkerMessageOutput) => {
+            resolve(messageOutput.data as Room);
             worker.off("message", onMessage);
           };
 
@@ -480,11 +515,11 @@ io.on("connection", (socket) => {
           worker.on("message", onMessage);
 
           // Send message to worker
-          const messageSend: WorkerMessageSend = {
-            type: "get",
+          const messageInput: WorkerMessageInput = {
+            type: "get-data",
             data: null,
           };
-          worker.postMessage(messageSend);
+          worker.postMessage(messageInput);
         })
     );
 
@@ -522,20 +557,20 @@ io.on("connection", (socket) => {
       }
 
       // Create message to send to room worker
-      const messageSend: WorkerMessageSend = {
+      const messageInput: WorkerMessageInput = {
         type: "leave-player",
         data: player,
       };
 
       // Send message to room worker
-      roomWorker.postMessage(messageSend);
+      roomWorker.postMessage(messageInput);
 
       // Listen for messages from room worker
-      roomWorker.on("message", (messageReceive: WorkerMessageReceive) => {
-        if (messageReceive.type === "player-left") {
+      roomWorker.on("message", (messageOutput: WorkerMessageOutput) => {
+        if (messageOutput.type === "player-left") {
           // Emit player left
           logger(`Player left room ${room.id}`, "success");
-          io.emit("player-left", messageReceive.data);
+          io.emit("player-left", messageOutput.data);
         }
       });
     }

@@ -2,8 +2,8 @@ import {
   Message,
   Player,
   Room,
-  WorkerMessageReceive,
-  WorkerMessageSend,
+  WorkerMessageInput,
+  WorkerMessageOutput,
 } from "@/lib/types";
 import { parentPort, workerData } from "worker_threads";
 
@@ -14,14 +14,14 @@ let isProcessing = false;
 const room: Room = workerData;
 
 // Queue to store pending messages while processing
-const queue: WorkerMessageSend[] = [];
+const queue: WorkerMessageInput[] = [];
 
 /**
  * Process incoming messages from parent thread
  * Handles room operations like joining/leaving players and chat messages
  * Uses a queue system to prevent concurrent processing
  */
-const processMessage = (msg: WorkerMessageSend) => {
+const processMessage = (msg: WorkerMessageInput) => {
   // If already processing a message, add to queue
   if (isProcessing) {
     queue.push(msg);
@@ -30,16 +30,20 @@ const processMessage = (msg: WorkerMessageSend) => {
 
   isProcessing = true;
 
-  let messageReceive: WorkerMessageReceive;
+  let messageOutput: WorkerMessageOutput;
 
   switch (msg.type) {
-    case "get":
-      // Return current room state
-      parentPort?.postMessage(room);
+    case "get-data":
+      // Send message to parent thread
+      messageOutput = {
+        type: "data",
+        data: room,
+      };
+      parentPort?.postMessage(messageOutput);
       break;
 
     case "join-player":
-      let messageReceiveType: WorkerMessageReceive["type"];
+      let messageReceiveType: WorkerMessageOutput["type"] = "player-joined";
 
       const joinPlayer: Player = msg.data as Player;
 
@@ -54,70 +58,82 @@ const processMessage = (msg: WorkerMessageSend) => {
         } else {
           // Add new player to room
           room.players.push(joinPlayer);
-          messageReceiveType = "player-joined";
         }
       }
 
-      // Notify parent thread of join result
-      messageReceive = {
+      // Send message to parent thread
+      messageOutput = {
         type: messageReceiveType,
         data: {
           roomId: room.id,
           player: joinPlayer,
         },
       };
-      parentPort?.postMessage(messageReceive);
+      parentPort?.postMessage(messageOutput);
       break;
 
     case "leave-player":
       // Remove player from room
       const leavePlayer: Player = msg.data as Player;
       room.players = room.players.filter((p) => p.id !== leavePlayer.id);
-      parentPort?.postMessage({
+
+      // Send message to parent thread
+      messageOutput = {
         type: "player-left",
         data: leavePlayer,
-      });
+      };
+      parentPort?.postMessage(messageOutput);
       break;
 
     case "send-message":
       // Add new chat message
       const sendMessage = msg.data as Message;
       room.chat.messages.push(sendMessage);
-      parentPort?.postMessage({
+
+      // Send message to parent thread
+      messageOutput = {
         type: "message-sent",
         data: {
           roomId: room.id,
           message: sendMessage,
         },
-      });
+      };
+      parentPort?.postMessage(messageOutput);
       break;
 
-    case "player-typing-on-in-chat":
+    case "player-typing-on-in-chat-of-room":
       // Add player to typing indicator
       const playerTypingOn = msg.data as Player;
       room.chat.playersTyping.push(playerTypingOn);
-      parentPort?.postMessage({
-        type: "add-player-typing-in-chat-of-room",
+
+      // Send message to parent thread
+      messageOutput = {
+        type: "player-typing-on-in-chat-of-room",
         data: {
           roomId: room.id,
           player: playerTypingOn,
         },
-      });
+      };
+
+      parentPort?.postMessage(messageOutput);
       break;
 
-    case "player-typing-off-in-chat":
+    case "player-typing-off-in-chat-of-room":
       // Remove player from typing indicator
       const playerTypingOff = msg.data as Player;
       room.chat.playersTyping = room.chat.playersTyping.filter(
         (p) => p.id !== playerTypingOff.id
       );
-      parentPort?.postMessage({
-        type: "remove-player-typing-in-chat-of-room",
+
+      // Send message to parent thread
+      messageOutput = {
+        type: "player-typing-off-in-chat-of-room",
         data: {
           roomId: room.id,
           player: playerTypingOff,
         },
-      });
+      };
+      parentPort?.postMessage(messageOutput);
       break;
 
     default:
