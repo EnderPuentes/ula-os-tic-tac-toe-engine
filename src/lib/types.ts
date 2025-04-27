@@ -18,6 +18,8 @@ export type Message = {
 export type Room = {
   id: string;
   name: string;
+  status: "waiting" | "playing" | "finished";
   chat: Chat;
   players: Player[];
+  maxPlayers: number;
 };

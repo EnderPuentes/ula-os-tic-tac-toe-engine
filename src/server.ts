@@ -36,8 +36,13 @@ io.on("connection", (socket) => {
       workerData: {
         id: roomId,
         name: roomName,
+        status: "waiting",
+        chat: {
+          messages: [],
+          playersTyping: [],
+        },
         players: [],
-        chat: { messages: [], playersTyping: [] },
+        maxPlayers: 2,
       } as Room,
       execArgv: ["-r", "ts-node/register"],
     });
