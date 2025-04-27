@@ -49,7 +49,7 @@ io.on("connection", (socket) => {
     if (players.has(playerId)) {
       // Emit player created error
       logger(`Player already exists`, "error");
-      io.emit("player-created-error", "Player already exists");
+      io.emit("create-player-error", "Player already exists");
       return;
     }
 
@@ -65,7 +65,7 @@ io.on("connection", (socket) => {
 
     // Emit player created
     logger(`Player created: ${playerName}`, "success");
-    io.emit("player-created", playerId);
+    io.emit("create-player-success", playerId);
   });
 
   /**
@@ -309,7 +309,10 @@ io.on("connection", (socket) => {
       if (!player) {
         // Emit send message to room error
         logger(`Player not found`, "error");
-        io.emit("player-send-message-in-chat-of-room-error", `Player ${socket.id} not found`);
+        io.emit(
+          "player-send-message-in-chat-of-room-error",
+          `Player ${socket.id} not found`
+        );
         return;
       }
 
@@ -344,7 +347,10 @@ io.on("connection", (socket) => {
         if (messageOutput.type === "message-sent") {
           // Emit message sent
           logger(`Message sent to room ${messageSent.roomId}`, "success");
-          io.emit("player-send-message-in-chat-of-room-success", messageSent.message);
+          io.emit(
+            "player-send-message-in-chat-of-room-success",
+            messageSent.message
+          );
         }
 
         // Remove listener
