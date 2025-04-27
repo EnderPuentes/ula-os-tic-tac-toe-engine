@@ -97,7 +97,6 @@ io.on("connection", (socket) => {
       },
       chat: { messages: [], playersTyping: [] },
       players: [],
-      maxPlayers: 2,
     };
 
     // Create room worker
@@ -264,7 +263,6 @@ io.on("connection", (socket) => {
 
     // On message
     const onMessage = (messageOutput: WorkerMessageOutput) => {
-      const room: Room = messageOutput.data as Room;
       const playerJoined: PlayerJoined = messageOutput.data as PlayerJoined;
 
       if (messageOutput.type === "player-joined") {
@@ -276,7 +274,7 @@ io.on("connection", (socket) => {
         logger(`Room ${roomId} is full`, "warn");
         socket.emit(
           "player-joined-to-room-error",
-          `Room ${roomId} is full, max players: ${room.maxPlayers}`
+          `Room ${roomId} is full, max players: 2`
         );
       } else if (messageOutput.type === "player-already-in-room") {
         // Emit player already in room

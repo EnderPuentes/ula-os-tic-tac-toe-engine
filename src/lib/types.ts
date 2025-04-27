@@ -28,7 +28,6 @@ export type Room = {
   game: Game;
   chat: Chat;
   players: Player[];
-  maxPlayers: number;
 };
 
 type PlayerAndRoomId = {
