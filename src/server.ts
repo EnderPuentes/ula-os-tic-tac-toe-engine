@@ -371,9 +371,15 @@ io.on("connection", (socket) => {
     // On message
     roomWorker.on("message", (messageOutput: WorkerMessageOutput) => {
       if (messageOutput.type === "start-game-success") {
+        const room = messageOutput.data as Room;
         // Emit game started
         logger(`Game started in room ${roomId}`, "success");
-        io.emit("start-game-in-room-success", messageOutput.data);
+        io.emit("start-game-in-room-success", roomId);
+      } else if (messageOutput.type === "start-game-error") {
+        const error = messageOutput.data as string;
+        // Emit start game in room error
+        logger(`Game not started in room ${roomId}`, "error");
+        io.emit("start-game-in-room-error", error);
       }
     });
   });

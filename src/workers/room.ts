@@ -229,21 +229,28 @@ const processMessage = (msg: WorkerMessageInput) => {
       break;
 
     case "start-game":
-      // Set room status to playing
-      room.status = "playing";
+      try {
+        // Set room status to playing
+        room.status = "playing";
 
-      // Set current player
-      room.game.currentPlayer = room.players[Math.floor(Math.random() * 2)];
+        // Set current player
+        room.game.currentPlayer = room.players[Math.floor(Math.random() * 2)];
 
-      // Set current symbol
-      room.game.currentSymbol = Math.random() < 0.5 ? "X" : "O";
+        // Set current symbol
+        room.game.currentSymbol = Math.random() < 0.5 ? "X" : "O";
 
-      // Send message to parent thread
-      messageOutput = {
-        type: "start-game-success",
-        data: room,
-      };
-      parentPort?.postMessage(messageOutput);
+        // Send message to parent thread
+        messageOutput = {
+          type: "start-game-success",
+          data: room,
+        };
+        parentPort?.postMessage(messageOutput);
+      } catch (error) {
+        parentPort?.postMessage({
+          type: "start-game-error",
+          data: error,
+        } as WorkerMessageOutput);
+      }
       break;
 
     case "player-plays-move-in-board":
