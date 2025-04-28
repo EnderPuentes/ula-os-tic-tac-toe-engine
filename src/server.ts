@@ -13,7 +13,6 @@ import type {
   Message,
   MessageSent,
   Player,
-  PlayerJoined,
   PlayerTypingOffInChatOfRoom,
   PlayerTypingOnInChatOfRoom,
   Room,
@@ -243,7 +242,7 @@ io.on("connection", (socket) => {
     if (!player) {
       // Emit join player to room error
       logger(`Player not found`, "error");
-      io.emit("join-player-to-room-error", `Player ${socket.id} not found`);
+      socket.emit("join-player-to-room-error", `Player ${socket.id} not found`);
       return;
     }
 
@@ -252,7 +251,7 @@ io.on("connection", (socket) => {
     if (!roomWorker) {
       // Emit join player to room error
       logger(`Room not found`, "error");
-      io.emit("join-player-to-room-error", `Room ${roomId} not found`);
+      socket.emit("join-player-to-room-error", `Room ${roomId} not found`);
       return;
     }
 
@@ -267,26 +266,20 @@ io.on("connection", (socket) => {
 
     // On message
     const onMessage = (messageOutput: WorkerMessageOutput) => {
-      const playerJoined: PlayerJoined = messageOutput.data as PlayerJoined;
-
-      if (messageOutput.type === "player-joined") {
-        // Emit player joined
+      if (messageOutput.type === "join-player-success") {
+        const player = messageOutput.data as Player;
+        // Emit player joined to room success
         logger(`Player joined room ${roomId}`, "success");
-        io.emit("player-joined-to-room-success", playerJoined.player.id);
-      } else if (messageOutput.type === "room-full") {
-        // Emit room full
-        logger(`Room ${roomId} is full`, "warn");
-        socket.emit(
-          "player-joined-to-room-error",
-          `Room ${roomId} is full, max players: 2`
-        );
-      } else if (messageOutput.type === "player-already-in-room") {
-        // Emit player already in room
-        logger(`Player already in room ${roomId}`, "warn");
-        socket.emit(
-          "player-joined-to-room-error",
-          `Player ${player.id} already in room ${roomId}`
-        );
+        socket.emit("player-joined-to-room-success", roomId, {
+          playerId: player.id,
+        });
+      } else if (messageOutput.type === "join-player-error") {
+        const error = messageOutput.data as string;
+        // Emit join player to room error
+        logger(`Room ${roomId} is full`, "error");
+        socket.emit("player-joined-to-room-error", roomId, {
+          error,
+        });
       }
 
       // Remove listener

@@ -83,10 +83,9 @@ export type WorkerMessageInput = {
 export type WorkerMessageOutput = {
   type:
     | "data"
-    | "player-joined"
+    | "join-player-error"
+    | "join-player-success"
     | "player-leaved"
-    | "player-already-in-room"
-    | "room-full"
     | "message-sent"
     | "player-typing-on-in-chat-of-room"
     | "player-typing-off-in-chat-of-room"
@@ -104,5 +103,6 @@ export type WorkerMessageOutput = {
     | PlayerTypingOnInChatOfRoom
     | PlayerTypingOffInChatOfRoom
     | MessageSent
-    | BoardMove;
+    | BoardMove
+    | string;
 };
