@@ -50,7 +50,7 @@ io.on("connection", (socket) => {
     if (players.has(playerId)) {
       // Emit player created error
       logger(`Player already exists`, "error");
-      io.emit("create-player-error", "Player already exists");
+      socket.emit("create-player-error", "Player already exists");
       return;
     }
 
@@ -66,7 +66,7 @@ io.on("connection", (socket) => {
 
     // Emit player created
     logger(`Player created: ${playerName}`, "success");
-    io.emit("create-player-success", playerId);
+    socket.emit("create-player-success", playerId);
   });
 
   /**
