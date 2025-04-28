@@ -61,7 +61,7 @@ export type WorkerMessageOutput = {
   type:
     | "data"
     | "player-joined"
-    | "player-left"
+    | "player-leaved"
     | "player-already-in-room"
     | "room-full"
     | "message-sent"

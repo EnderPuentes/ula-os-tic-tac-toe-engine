@@ -323,6 +323,49 @@ io.on("connection", (socket) => {
   });
 
   /**
+   * Leave player from room
+   * @param roomId - The id of the room to leave
+   * Removes player from specified game room
+   */
+  socket.on("leave-player-from-room", async (roomId: string) => {
+    // Check if player is in room
+    const player: Player | undefined = players.get(socket.id);
+    if (!player) {
+      // Emit leave player from room error
+      logger(`Player not found`, "error");
+      io.emit("leave-player-from-room-error", `Player ${socket.id} not found`);
+      return;
+    }
+
+    // Check if room exists
+    const roomWorker: Worker | undefined = rooms.get(roomId);
+    if (!roomWorker) {
+      // Emit leave player from room error
+      logger(`Room not found`, "error");
+      io.emit("leave-player-from-room-error", `Room ${roomId} not found`);
+      return;
+    }
+
+    // Create message to send to room worker
+    const messageInput: WorkerMessageInput = {
+      type: "leave-player",
+      data: player,
+    };
+
+    // Send message to room worker
+    roomWorker.postMessage(messageInput);
+
+    // On message
+    roomWorker.on("message", (messageOutput: WorkerMessageOutput) => {
+      if (messageOutput.type === "player-leaved") {
+        // Emit player leave
+        logger(`Player leave room ${roomId}`, "success");
+        io.emit("leave-player-from-room-success", messageOutput.data);
+      }
+    });
+  });
+
+  /**
    * Send message to room
    * @param roomId - The id of the room
    * @param message - The message content
@@ -606,7 +649,7 @@ io.on("connection", (socket) => {
 
       // Listen for messages from room worker
       roomWorker.on("message", (messageOutput: WorkerMessageOutput) => {
-        if (messageOutput.type === "player-left") {
+        if (messageOutput.type === "player-leaved") {
           // Emit player left
           logger(`Player left room ${room.id}`, "success");
           io.emit("player-left", messageOutput.data);

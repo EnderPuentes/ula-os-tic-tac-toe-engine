@@ -79,7 +79,7 @@ const processMessage = (msg: WorkerMessageInput) => {
 
       // Send message to parent thread
       messageOutput = {
-        type: "player-left",
+        type: "player-leaved",
         data: leavePlayer,
       };
       parentPort?.postMessage(messageOutput);
