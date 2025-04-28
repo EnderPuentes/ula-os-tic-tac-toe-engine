@@ -138,10 +138,6 @@ export function checkWinner(board: BoardSymbol[][]): BoardSymbol | null {
   return null;
 }
 
-const postMessage = (messageOutput: WorkerMessageOutput) => {
-  return parentPort?.postMessage(messageOutput);
-};
-
 /**
  * Process incoming messages from parent thread
  * Handles room operations like joining/leaving players and chat messages
@@ -169,52 +165,67 @@ const processMessage = (msg: WorkerMessageInput) => {
       break;
 
     case "join-player":
-      const joinPlayer: Player = msg.data as Player;
+      try {
+        const joinPlayer: Player = msg.data as Player;
 
-      // Check if room is full (max 2 players)
-      if (room.players.length >= 2) {
-        postMessage({
-          type: "join-player-error",
-          data: `Room ${room.name} is full`,
-        });
-      } else {
-        // Verify player isn't already in room
-        const alreadyInRoom = room.players.some((p) => p.id === joinPlayer.id);
-        if (alreadyInRoom) {
-          postMessage({
+        // Check if room is full (max 2 players)
+        if (room.players.length >= 2) {
+          parentPort?.postMessage({
             type: "join-player-error",
-            data: `Player ${joinPlayer.id} is already in room ${room.name}`,
-          });
+            data: `Room ${room.name} is full`,
+          } as WorkerMessageOutput);
         } else {
-          // Add new player to room
-          room.players.push(joinPlayer);
+          // Verify player isn't already in room
+          const alreadyInRoom = room.players.some(
+            (p) => p.id === joinPlayer.id
+          );
+          if (alreadyInRoom) {
+            parentPort?.postMessage({
+              type: "join-player-error",
+              data: `Player ${joinPlayer.id} is already in room ${room.name}`,
+            } as WorkerMessageOutput);
+          } else {
+            // Add new player to room
+            room.players.push(joinPlayer);
 
-          // If there are 2 players, set room status to done
-          if (room.players.length === 2) {
-            room.status = "done";
+            // If there are 2 players, set room status to done
+            if (room.players.length === 2) {
+              room.status = "done";
+            }
+
+            // Send message to parent thread
+            parentPort?.postMessage({
+              type: "join-player-success",
+              data: joinPlayer,
+            } as WorkerMessageOutput);
           }
-
-          // Send message to parent thread
-          postMessage({
-            type: "join-player-success",
-            data: joinPlayer,
-          });
         }
+      } catch (error) {
+        parentPort?.postMessage({
+          type: "join-player-error",
+          data: error,
+        } as WorkerMessageOutput);
       }
 
       break;
 
     case "leave-player":
-      // Remove player from room
-      const leavePlayer: Player = msg.data as Player;
-      room.players = room.players.filter((p) => p.id !== leavePlayer.id);
+      try {
+        // Remove player from room
+        const leavePlayer: Player = msg.data as Player;
+        room.players = room.players.filter((p) => p.id !== leavePlayer.id);
 
-      // Send message to parent thread
-      messageOutput = {
-        type: "player-leaved",
-        data: leavePlayer,
-      };
-      parentPort?.postMessage(messageOutput);
+        // Send message to parent thread
+        parentPort?.postMessage({
+          type: "leave-player-success",
+          data: leavePlayer,
+        } as WorkerMessageOutput);
+      } catch (error) {
+        parentPort?.postMessage({
+          type: "leave-player-error",
+          data: error,
+        } as WorkerMessageOutput);
+      }
       break;
 
     case "start-game":

@@ -257,19 +257,17 @@ io.on("connection", (socket) => {
       return;
     }
 
-    // Join player to room
-    const messageInput: WorkerMessageInput = {
+    // Send message to room worker
+    roomWorker.postMessage({
       type: "join-player",
       data: player,
-    };
-
-    // Send message to room worker
-    roomWorker.postMessage(messageInput);
+    } as WorkerMessageInput);
 
     // On message
     const onMessage = (messageOutput: WorkerMessageOutput) => {
       if (messageOutput.type === "join-player-success") {
         const player = messageOutput.data as Player;
+
         // Emit player joined to room success
         logger(`Player joined room ${roomId}`, "success");
         socket.emit("player-joined-to-room-success", roomId, {
@@ -277,6 +275,7 @@ io.on("connection", (socket) => {
         });
       } else if (messageOutput.type === "join-player-error") {
         const error = messageOutput.data as string;
+
         // Emit join player to room error
         logger(`Room ${roomId} is full`, "error");
         socket.emit("player-joined-to-room-error", roomId, {
@@ -316,21 +315,23 @@ io.on("connection", (socket) => {
       return;
     }
 
-    // Create message to send to room worker
-    const messageInput: WorkerMessageInput = {
+    // Send message to room worker
+    roomWorker.postMessage({
       type: "leave-player",
       data: player,
-    };
-
-    // Send message to room worker
-    roomWorker.postMessage(messageInput);
+    } as WorkerMessageInput);
 
     // On message
     roomWorker.on("message", (messageOutput: WorkerMessageOutput) => {
-      if (messageOutput.type === "player-leaved") {
+      if (messageOutput.type === "leave-player-success") {
         // Emit player leave
         logger(`Player leave room ${roomId}`, "success");
         io.emit("leave-player-from-room-success", messageOutput.data);
+      } else if (messageOutput.type === "leave-player-error") {
+        const error = messageOutput.data as string;
+        // Emit leave player from room error
+        logger(`Player not found`, "error");
+        io.emit("leave-player-from-room-error", error);
       }
     });
   });
@@ -725,10 +726,14 @@ io.on("connection", (socket) => {
 
       // Listen for messages from room worker
       roomWorker.on("message", (messageOutput: WorkerMessageOutput) => {
-        if (messageOutput.type === "player-leaved") {
+        if (messageOutput.type === "leave-player-success") {
           // Emit player left
           logger(`Player left room ${room.id}`, "success");
           io.emit("player-left", messageOutput.data);
+        } else if (messageOutput.type === "leave-player-error") {
+          const error = messageOutput.data as string;
+          // Emit leave player from room error
+          logger(error, "error");
         }
       });
     }
