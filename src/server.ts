@@ -270,17 +270,13 @@ io.on("connection", (socket) => {
 
         // Emit player joined to room success
         logger(`Player joined room ${roomId}`, "success");
-        io.emit("player-joined-to-room-success", roomId, {
-          playerId: player.id,
-        });
+        io.emit("player-joined-to-room-success", roomId, player.id);
       } else if (messageOutput.type === "join-player-error") {
         const error = messageOutput.data as string;
 
         // Emit join player to room error
         logger(`Room ${roomId} is full`, "error");
-        socket.emit("player-joined-to-room-error", roomId, {
-          error,
-        });
+        socket.emit("player-joined-to-room-error", error);
       }
 
       // Remove listener
@@ -327,7 +323,7 @@ io.on("connection", (socket) => {
         const player = messageOutput.data as Player;
         // Emit player leave
         logger(`Player leave room ${roomId}`, "success");
-        io.emit("leave-player-from-room-success", player.id);
+        io.emit("leave-player-from-room-success", roomId, player.id);
       } else if (messageOutput.type === "leave-player-error") {
         const error = messageOutput.data as string;
         // Emit leave player from room error
