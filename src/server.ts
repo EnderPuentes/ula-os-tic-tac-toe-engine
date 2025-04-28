@@ -233,7 +233,7 @@ io.on("connection", (socket) => {
    * @param roomId - The id of the room to join
    * Adds player to specified game room
    */
-  socket.on("join-player-to-room", (roomId: string) => {
+  socket.on("join-player-to-room", async (roomId: string) => {
     // Check if player is in room
     const player: Player | undefined = players.get(socket.id);
     if (!player) {
@@ -250,6 +250,35 @@ io.on("connection", (socket) => {
       logger(`Room not found`, "error");
       io.emit("join-player-to-room-error", `Room ${roomId} not found`);
       return;
+    }
+
+    // Check if player is already in another room
+    for (const [existingRoomId, worker] of rooms.entries()) {
+      const roomData = await new Promise<Room>((resolve) => {
+        const messageInput: WorkerMessageInput = {
+          type: "get-data",
+          data: null,
+        };
+
+        worker.postMessage(messageInput);
+
+        const onMessage = (messageOutput: WorkerMessageOutput) => {
+          resolve(messageOutput.data as Room);
+          worker.off("message", onMessage);
+        };
+
+        worker.on("message", onMessage);
+      });
+
+      if (roomData.players.some((p) => p.id === player.id)) {
+        // Emit error if player is already in another room
+        logger(`Player already in another room`, "warn");
+        socket.emit(
+          "player-joined-to-room-error",
+          `Player ${player.id} is already in room ${existingRoomId}`
+        );
+        return;
+      }
     }
 
     // Join player to room
