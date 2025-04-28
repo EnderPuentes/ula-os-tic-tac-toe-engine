@@ -90,13 +90,15 @@ io.on("connection", (socket) => {
       id: roomId,
       name: roomName,
       status: "waiting",
-      game: {
-        board: Array(9).fill(""),
-        currentPlayer: null,
-        winner: null,
-      },
+      board: Array(3)
+        .fill(null)
+        .map(() => Array(3).fill(null)),
       chat: { messages: [], playersTyping: [] },
       players: [],
+      currentPlayer: null,
+      currentSymbol: null,
+      winner: null,
+      results: {},
     };
 
     // Create room worker
@@ -361,6 +363,51 @@ io.on("connection", (socket) => {
         // Emit player leave
         logger(`Player leave room ${roomId}`, "success");
         io.emit("leave-player-from-room-success", messageOutput.data);
+      }
+    });
+  });
+
+  /**
+   * Start game in room
+   * @param roomId - The id of the room
+   * Starts the game in the specified room
+   */
+  socket.on("start-game-in-room", (roomId: string) => {
+    logger(`Starting game in room ${roomId}`, "info");
+
+    // Check if player is in room
+    const player: Player | undefined = players.get(socket.id);
+    if (!player) {
+      // Emit start game in room error
+      logger(`Player not found`, "error");
+      io.emit("start-game-in-room-error", `Player ${socket.id} not found`);
+      return;
+    }
+
+    // Check if room exists
+    const roomWorker: Worker | undefined = rooms.get(roomId);
+    if (!roomWorker) {
+      // Emit start game in room error
+      logger(`Room not found`, "error");
+      io.emit("start-game-in-room-error", `Room ${roomId} not found`);
+      return;
+    }
+
+    // Create message to send to room worker
+    const messageInput: WorkerMessageInput = {
+      type: "start-game",
+      data: player,
+    };
+
+    // Send message to room worker
+    roomWorker.postMessage(messageInput);
+
+    // On message
+    roomWorker.on("message", (messageOutput: WorkerMessageOutput) => {
+      if (messageOutput.type === "start-game-success") {
+        // Emit game started
+        logger(`Game started in room ${roomId}`, "success");
+        io.emit("start-game-in-room-success", messageOutput.data);
       }
     });
   });

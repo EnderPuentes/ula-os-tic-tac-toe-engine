@@ -58,6 +58,11 @@ const processMessage = (msg: WorkerMessageInput) => {
         } else {
           // Add new player to room
           room.players.push(joinPlayer);
+
+          // If there are 2 players, set room status to done
+          if (room.players.length === 2) {
+            room.status = "done";
+          }
         }
       }
 
@@ -81,6 +86,20 @@ const processMessage = (msg: WorkerMessageInput) => {
       messageOutput = {
         type: "player-leaved",
         data: leavePlayer,
+      };
+      parentPort?.postMessage(messageOutput);
+      break;
+
+    case "start-game":
+      // Start game
+      room.status = "playing";
+      room.currentPlayer = room.players[Math.floor(Math.random() * 2)];
+      room.currentSymbol = Math.random() < 0.5 ? "X" : "O";
+
+      // Send message to parent thread
+      messageOutput = {
+        type: "start-game-success",
+        data: room,
       };
       parentPort?.postMessage(messageOutput);
       break;
