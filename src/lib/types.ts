@@ -16,34 +16,39 @@ export type Message = {
 };
 
 export type RoomStatus = "waiting" | "playing" | "finished" | "done";
+
 export type BoardSymbol = "X" | "O" | null;
+
 export type BoardMove = {
   row: number;
   col: number;
   symbol: BoardSymbol;
 };
 
+export type CellPosition = { row: number; col: number };
+
+export type PlayerResult = {
+  wins: number;
+  losses: number;
+  draws: number;
+};
+
+export type Game = {
+  board: BoardSymbol[][];
+  currentPlayer: Player | null;
+  currentSymbol: BoardSymbol | null;
+  winner: Player | null;
+  winnerLine: [CellPosition, CellPosition, CellPosition] | null;
+};
+
 export type Room = {
   id: string;
   name: string;
   status: RoomStatus;
+  game: Game;
   chat: Chat;
-  board: BoardSymbol[][];
   players: Player[];
-  winner: Player | null;
-  winnerLine: {
-    row: number;
-    col: number;
-  }[] | null;
-  currentPlayer: Player | null;
-  currentSymbol: BoardSymbol | null;
-  results: {
-    [playerId: string]: {
-      wins: number;
-      losses: number;
-      draws: number;
-    };
-  };
+  results: Record<string, PlayerResult>;
 };
 
 type PlayerAndRoomId = {
