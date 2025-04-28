@@ -81,7 +81,7 @@ io.on("connection", (socket) => {
     if (rooms.has(roomId)) {
       // Emit room created error
       logger(`Room already exists`, "error");
-      io.emit("create-room-error", "Room already exists");
+      socket.emit("create-room-error", "Room already exists");
       return;
     }
 
@@ -90,15 +90,17 @@ io.on("connection", (socket) => {
       id: roomId,
       name: roomName,
       status: "waiting",
-      board: Array(3)
-        .fill(null)
-        .map(() => Array(3).fill(null)),
+      game: {
+        board: Array(3)
+          .fill(null)
+          .map(() => Array(3).fill(null)),
+        currentPlayer: null,
+        currentSymbol: null,
+        winner: null,
+        winnerLine: null,
+      },
       chat: { messages: [], playersTyping: [] },
       players: [],
-      currentPlayer: null,
-      currentSymbol: null,
-      winner: null,
-      winnerLine: null,
       results: {},
     };
 
@@ -114,7 +116,7 @@ io.on("connection", (socket) => {
     // Emit room created
     logger(`Room created: ${roomName}`, "success");
     console.log("rooms", rooms.size);
-    io.emit("create-room-success", roomId, socket.id);
+    socket.emit("create-room-success", roomId, socket.id);
   });
 
   /**

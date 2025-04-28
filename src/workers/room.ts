@@ -1,6 +1,7 @@
 import {
   BoardMove,
   BoardSymbol,
+  CellPosition,
   Message,
   Player,
   Room,
@@ -23,7 +24,10 @@ const queue: WorkerMessageInput[] = [];
  * @param board - The board to check
  * @param winner - The winner
  */
-export function getWinnerLine(board: BoardSymbol[][], winner: BoardSymbol) {
+export function getWinnerLine(
+  board: BoardSymbol[][],
+  winner: BoardSymbol
+): [CellPosition, CellPosition, CellPosition] | null {
   // Check for horizontal wins
   for (let row = 0; row < 3; row++) {
     if (
@@ -190,7 +194,7 @@ const processMessage = (msg: WorkerMessageInput) => {
             room.status = "done";
           }
 
-      // Send message to parent thread
+          // Send message to parent thread
           postMessage({
             type: "join-player-success",
             data: joinPlayer,
@@ -214,10 +218,14 @@ const processMessage = (msg: WorkerMessageInput) => {
       break;
 
     case "start-game":
-      // Start game
+      // Set room status to playing
       room.status = "playing";
-      room.currentPlayer = room.players[Math.floor(Math.random() * 2)];
-      room.currentSymbol = Math.random() < 0.5 ? "X" : "O";
+
+      // Set current player
+      room.game.currentPlayer = room.players[Math.floor(Math.random() * 2)];
+
+      // Set current symbol
+      room.game.currentSymbol = Math.random() < 0.5 ? "X" : "O";
 
       // Send message to parent thread
       messageOutput = {
@@ -230,23 +238,28 @@ const processMessage = (msg: WorkerMessageInput) => {
     case "player-plays-move-in-board":
       // Play move in board
       const playMove = msg.data as BoardMove;
-      room.board[playMove.row][playMove.col] = playMove.symbol;
+      room.game.board[playMove.row][playMove.col] = playMove.symbol;
 
       // Check if there is a winner
-      const winner = checkWinner(room.board);
-      if (winner) {
-        room.status = "finished";
-        room.winner = room.currentPlayer;
-        room.winnerLine = getWinnerLine(room.board, winner);
-      } else {
+      const winner = checkWinner(room.game.board);
+      if (!winner) {
         // Change current player
-        room.currentPlayer =
-          room.currentPlayer === room.players[0]
+        room.game.currentPlayer =
+          room.game.currentPlayer === room.players[0]
             ? room.players[1]
             : room.players[0];
 
         // Change current symbol
-        room.currentSymbol = room.currentSymbol === "X" ? "O" : "X";
+        room.game.currentSymbol = room.game.currentSymbol === "X" ? "O" : "X";
+      } else {
+        // Set room status to finished
+        room.status = "finished";
+
+        // Set winner
+        room.game.winner = room.game.currentPlayer;
+
+        // Set winner line
+        room.game.winnerLine = getWinnerLine(room.game.board, winner);
       }
 
       // Send message to parent thread
