@@ -16,18 +16,27 @@ export type Message = {
 };
 
 export type RoomStatus = "waiting" | "playing" | "finished" | "done";
-export type RoomBoardSymbol = "X" | "O" | null;
+export type BoardSymbol = "X" | "O" | null;
+export type BoardMove = {
+  row: number;
+  col: number;
+  symbol: BoardSymbol;
+};
 
 export type Room = {
   id: string;
   name: string;
   status: RoomStatus;
   chat: Chat;
-  board: RoomBoardSymbol[][];
+  board: BoardSymbol[][];
   players: Player[];
   winner: Player | null;
+  winnerLine: {
+    row: number;
+    col: number;
+  }[] | null;
   currentPlayer: Player | null;
-  currentSymbol: RoomBoardSymbol | null;
+  currentSymbol: BoardSymbol | null;
   results: {
     [playerId: string]: {
       wins: number;
@@ -61,8 +70,9 @@ export type WorkerMessageInput = {
     | "send-message"
     | "player-typing-on-in-chat-of-room"
     | "player-typing-off-in-chat-of-room"
+    | "player-plays-move-in-board"
     | "start-game";
-  data: Message | Player | Room | null;
+  data: Message | Player | Room | BoardMove | null;
 };
 
 export type WorkerMessageOutput = {
@@ -75,6 +85,8 @@ export type WorkerMessageOutput = {
     | "message-sent"
     | "player-typing-on-in-chat-of-room"
     | "player-typing-off-in-chat-of-room"
+    | "player-plays-move-in-board-success"
+    | "player-plays-move-in-board-error"
     | "start-game-success"
     | "start-game-error";
   data:
@@ -86,5 +98,6 @@ export type WorkerMessageOutput = {
     | PlayerLeft
     | PlayerTypingOnInChatOfRoom
     | PlayerTypingOffInChatOfRoom
-    | MessageSent;
+    | MessageSent
+    | BoardMove;
 };

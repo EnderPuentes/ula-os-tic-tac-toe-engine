@@ -9,6 +9,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { Worker } from "worker_threads";
 import type {
+  BoardMove,
   Message,
   MessageSent,
   Player,
@@ -98,6 +99,7 @@ io.on("connection", (socket) => {
       currentPlayer: null,
       currentSymbol: null,
       winner: null,
+      winnerLine: null,
       results: {},
     };
 
@@ -113,7 +115,7 @@ io.on("connection", (socket) => {
     // Emit room created
     logger(`Room created: ${roomName}`, "success");
     console.log("rooms", rooms.size);
-    io.emit("create-room-success", roomId);
+    io.emit("create-room-success", roomId, socket.id);
   });
 
   /**
@@ -254,35 +256,6 @@ io.on("connection", (socket) => {
       return;
     }
 
-    // Check if player is already in another room
-    for (const [existingRoomId, worker] of rooms.entries()) {
-      const roomData = await new Promise<Room>((resolve) => {
-        const messageInput: WorkerMessageInput = {
-          type: "get-data",
-          data: null,
-        };
-
-        worker.postMessage(messageInput);
-
-        const onMessage = (messageOutput: WorkerMessageOutput) => {
-          resolve(messageOutput.data as Room);
-          worker.off("message", onMessage);
-        };
-
-        worker.on("message", onMessage);
-      });
-
-      if (roomData.players.some((p) => p.id === player.id)) {
-        // Emit error if player is already in another room
-        logger(`Player already in another room`, "warn");
-        socket.emit(
-          "player-joined-to-room-error",
-          `Player ${player.id} is already in room ${existingRoomId}`
-        );
-        return;
-      }
-    }
-
     // Join player to room
     const messageInput: WorkerMessageInput = {
       type: "join-player",
@@ -411,6 +384,67 @@ io.on("connection", (socket) => {
       }
     });
   });
+
+  /**
+   * Player plays move in board of room
+   * @param roomId - The id of the room
+   * @param move - The move to play
+   * Plays a move in the specified room
+   */
+  socket.on(
+    "player-plays-move-in-board-of-room",
+    ({ roomId, move }: { roomId: string; move: BoardMove }) => {
+      logger(`Player plays move in board of room ${roomId}`, "info");
+
+      // Check if player is in room
+      const player: Player | undefined = players.get(socket.id);
+      if (!player) {
+        // Emit player plays move in board of room error
+        logger(`Player not found`, "error");
+        io.emit(
+          "player-plays-move-in-board-of-room-error",
+          `Player ${socket.id} not found`
+        );
+        return;
+      }
+
+      // Check if room exists
+      const roomWorker: Worker | undefined = rooms.get(roomId);
+      if (!roomWorker) {
+        // Emit player plays move in board of room error
+        logger(`Room not found`, "error");
+        io.emit(
+          "player-plays-move-in-board-of-room-error",
+          `Room ${roomId} not found`
+        );
+        return;
+      }
+
+      // Create message to send to room worker
+      const messageInput: WorkerMessageInput = {
+        type: "player-plays-move-in-board",
+        data: move,
+      };
+
+      // Send message to room worker
+      roomWorker.postMessage(messageInput);
+
+      // On message
+      roomWorker.on("message", (messageOutput: WorkerMessageOutput) => {
+        if (messageOutput.type === "player-plays-move-in-board-success") {
+          // Emit play move in board success
+          io.emit("player-plays-move-in-board-of-room-success", roomId);
+        } else if (messageOutput.type === "player-plays-move-in-board-error") {
+          // Emit play move in board error
+          logger(`Play move in board error`, "error");
+          io.emit(
+            "player-plays-move-in-board-of-room-error",
+            `Error playing move`
+          );
+        }
+      });
+    }
+  );
 
   /**
    * Send message to room
