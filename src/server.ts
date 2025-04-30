@@ -95,12 +95,17 @@ io.on("connection", (socket) => {
           .fill(null)
           .map(() => Array(3).fill(null)),
         currentPlayer: null,
-        currentSymbol: null,
-        winner: null,
+        winnerPlayer: null,
         winnerLine: null,
       },
-      chat: { messages: [], playersTyping: [] },
-      players: [],
+      chat: {
+        messages: [],
+        playersTyping: [],
+      },
+      players: {
+        player1: null,
+        player2: null,
+      },
       results: {},
     };
 
@@ -385,6 +390,57 @@ io.on("connection", (socket) => {
   });
 
   /**
+   * Play again in room
+   * @param roomId - The id of the room
+   * Plays again in the specified room
+   */
+  socket.on("play-again-in-room", (roomId: string) => {
+    logger(`Playing again in room ${roomId}`, "info");
+
+    // Check if player is in room
+    const player: Player | undefined = players.get(socket.id);
+    if (!player) {
+      // Emit play again in room error
+      logger(`Player not found`, "error");
+      io.emit("play-again-in-room-error", `Player ${socket.id} not found`);
+      return;
+    }
+
+    // Check if room exists
+    const roomWorker: Worker | undefined = rooms.get(roomId);
+    if (!roomWorker) {
+      // Emit play again in room error
+      logger(`Room not found`, "error");
+      io.emit("play-again-in-room-error", `Room ${roomId} not found`);
+      return;
+    }
+
+    // Create message to send to room worker
+    const messageInput: WorkerMessageInput = {
+      type: "play-again",
+      data: player,
+    };
+
+    // Send message to room worker
+    roomWorker.postMessage(messageInput);
+
+    // On message
+    roomWorker.on("message", (messageOutput: WorkerMessageOutput) => {
+      if (messageOutput.type === "play-again-success") {
+        const room = messageOutput.data as Room;
+        // Emit play again in room success
+        logger(`Game played again in room ${roomId}`, "success");
+        io.emit("play-again-in-room-success", roomId);
+      } else if (messageOutput.type === "play-again-error") {
+        const error = messageOutput.data as string;
+        // Emit play again in room error
+        logger(`Game not played again in room ${roomId}`, "error");
+        io.emit("play-again-in-room-error", error);
+      }
+    });
+  });
+
+  /**
    * Player plays move in board of room
    * @param roomId - The id of the room
    * @param move - The move to play
@@ -496,13 +552,18 @@ io.on("connection", (socket) => {
       // On message
       const onMessage = (messageOutput: WorkerMessageOutput) => {
         const messageSent: MessageSent = messageOutput.data as MessageSent;
-        if (messageOutput.type === "message-sent") {
+        if (messageOutput.type === "send-message-success") {
           // Emit message sent
           logger(`Message sent to room ${messageSent.roomId}`, "success");
           io.emit(
             "player-send-message-in-chat-of-room-success",
             messageSent.message
           );
+        } else if (messageOutput.type === "send-message-error") {
+          const error = messageOutput.data as string;
+          // Emit send message to room error
+          logger(`Message not sent to room ${messageSent.roomId}`, "error");
+          io.emit("send-message-to-room-error", error);
         }
 
         // Remove listener
@@ -689,8 +750,10 @@ io.on("connection", (socket) => {
     const roomsData: Room[] = await Promise.all(dataPromises);
 
     // Check if player is in any room with 'playing' status
-    const room = roomsData.find((room) =>
-      room.players.some((player) => player.id === socket.id)
+    const room = roomsData.find(
+      (room) =>
+        room.players.player1?.id === socket.id ||
+        room.players.player2?.id === socket.id
     );
 
     if (!room) {

@@ -4,6 +4,10 @@ export type Player = {
   avatar: string;
 };
 
+export type RoomPlayer = Player & {
+  symbol: BoardSymbol;
+};
+
 export type Chat = {
   playersTyping: Player[];
   messages: Message[];
@@ -35,9 +39,8 @@ export type PlayerResult = {
 
 export type Game = {
   board: BoardSymbol[][];
-  currentPlayer: Player | null;
-  currentSymbol: BoardSymbol | null;
-  winner: Player | null;
+  currentPlayer: RoomPlayer | null;
+  winnerPlayer: RoomPlayer | null;
   winnerLine: [CellPosition, CellPosition, CellPosition] | null;
 };
 
@@ -47,7 +50,10 @@ export type Room = {
   status: RoomStatus;
   game: Game;
   chat: Chat;
-  players: Player[];
+  players: {
+    player1: RoomPlayer | null;
+    player2: RoomPlayer | null;
+  };
   results: Record<string, PlayerResult>;
 };
 
@@ -76,7 +82,8 @@ export type WorkerMessageInput = {
     | "player-typing-on-in-chat-of-room"
     | "player-typing-off-in-chat-of-room"
     | "player-plays-move-in-board"
-    | "start-game";
+    | "start-game"
+    | "play-again";
   data: Message | Player | Room | BoardMove | null;
 };
 
@@ -87,13 +94,16 @@ export type WorkerMessageOutput = {
     | "join-player-success"
     | "leave-player-success"
     | "leave-player-error"
-    | "message-sent"
+    | "send-message-success"
+    | "send-message-error"
     | "player-typing-on-in-chat-of-room"
     | "player-typing-off-in-chat-of-room"
     | "player-plays-move-in-board-success"
     | "player-plays-move-in-board-error"
     | "start-game-success"
-    | "start-game-error";
+    | "start-game-error"
+    | "play-again-success"
+    | "play-again-error";
   data:
     | Room
     | Player

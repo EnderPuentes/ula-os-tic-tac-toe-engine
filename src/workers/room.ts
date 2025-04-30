@@ -5,6 +5,7 @@ import {
   Message,
   Player,
   Room,
+  RoomPlayer,
   WorkerMessageInput,
   WorkerMessageOutput,
 } from "@/lib/types";
@@ -20,20 +21,20 @@ const room: Room = workerData;
 const queue: WorkerMessageInput[] = [];
 
 /**
- * Get the winner line in the board
+ * Get the winnerPlayer line in the board
  * @param board - The board to check
- * @param winner - The winner
+ * @param winnerPlayer - The winnerPlayer
  */
 export function getWinnerLine(
   board: BoardSymbol[][],
-  winner: BoardSymbol
+  winnerPlayer: BoardSymbol
 ): [CellPosition, CellPosition, CellPosition] | null {
   // Check for horizontal wins
   for (let row = 0; row < 3; row++) {
     if (
-      board[row][0] === winner &&
-      board[row][1] === winner &&
-      board[row][2] === winner
+      board[row][0] === winnerPlayer &&
+      board[row][1] === winnerPlayer &&
+      board[row][2] === winnerPlayer
     ) {
       return [
         { row, col: 0 },
@@ -46,9 +47,9 @@ export function getWinnerLine(
   // Check for vertical wins
   for (let col = 0; col < 3; col++) {
     if (
-      board[0][col] === winner &&
-      board[1][col] === winner &&
-      board[2][col] === winner
+      board[0][col] === winnerPlayer &&
+      board[1][col] === winnerPlayer &&
+      board[2][col] === winnerPlayer
     ) {
       return [
         { row: 0, col },
@@ -60,9 +61,9 @@ export function getWinnerLine(
 
   // Check diagonal wins
   if (
-    board[0][0] === winner &&
-    board[1][1] === winner &&
-    board[2][2] === winner
+    board[0][0] === winnerPlayer &&
+    board[1][1] === winnerPlayer &&
+    board[2][2] === winnerPlayer
   ) {
     return [
       { row: 0, col: 0 },
@@ -73,9 +74,9 @@ export function getWinnerLine(
 
   // Check reverse diagonal wins
   if (
-    board[0][2] === winner &&
-    board[1][1] === winner &&
-    board[2][0] === winner
+    board[0][2] === winnerPlayer &&
+    board[1][1] === winnerPlayer &&
+    board[2][0] === winnerPlayer
   ) {
     return [
       { row: 0, col: 2 },
@@ -84,14 +85,14 @@ export function getWinnerLine(
     ];
   }
 
-  // If no winner, return null
+  // If no winnerPlayer, return null
   return null;
 }
 
 /**
- * Check if there is a winner in the board
+ * Check if there is a winnerPlayer in the board
  * @param board - The board to check
- * @returns The winner if there is one, otherwise null
+ * @returns The winnerPlayer if there is one, otherwise null
  */
 export function checkWinner(board: BoardSymbol[][]): BoardSymbol | null {
   // Check for horizontal wins
@@ -134,7 +135,7 @@ export function checkWinner(board: BoardSymbol[][]): BoardSymbol | null {
     return board[0][2];
   }
 
-  // If no winner, return null
+  // If no winnerPlayer, return null
   return null;
 }
 
@@ -166,30 +167,40 @@ const processMessage = (msg: WorkerMessageInput) => {
 
     case "join-player":
       try {
-        const joinPlayer: Player = msg.data as Player;
+        const joinPlayer: RoomPlayer = msg.data as RoomPlayer;
 
         // Check if room is full (max 2 players)
-        if (room.players.length >= 2) {
+        if (room.players.player1 && room.players.player2) {
           parentPort?.postMessage({
             type: "join-player-error",
             data: `Room ${room.name} is full`,
           } as WorkerMessageOutput);
         } else {
           // Verify player isn't already in room
-          const alreadyInRoom = room.players.some(
-            (p) => p.id === joinPlayer.id
-          );
-          if (alreadyInRoom) {
+          if (
+            room.players.player1?.id === joinPlayer.id ||
+            room.players.player2?.id === joinPlayer.id
+          ) {
             parentPort?.postMessage({
               type: "join-player-error",
               data: `Player ${joinPlayer.id} is already in room ${room.name}`,
             } as WorkerMessageOutput);
           } else {
             // Add new player to room
-            room.players.push(joinPlayer);
+            if (!room.players.player1) {
+              room.players.player1 = {
+                ...joinPlayer,
+                symbol: "X",
+              };
+            } else if (!room.players.player2) {
+              room.players.player2 = {
+                ...joinPlayer,
+                symbol: "O",
+              };
+            }
 
             // If there are 2 players, set room status to done
-            if (room.players.length === 2) {
+            if (room.players.player1 && room.players.player2) {
               room.status = "done";
             }
 
@@ -213,7 +224,11 @@ const processMessage = (msg: WorkerMessageInput) => {
       try {
         // Remove player from room
         const leavePlayer: Player = msg.data as Player;
-        room.players = room.players.filter((p) => p.id !== leavePlayer.id);
+        if (room.players.player1?.id === leavePlayer.id) {
+          room.players.player1 = null;
+        } else if (room.players.player2?.id === leavePlayer.id) {
+          room.players.player2 = null;
+        }
 
         // Send message to parent thread
         parentPort?.postMessage({
@@ -234,10 +249,10 @@ const processMessage = (msg: WorkerMessageInput) => {
         room.status = "playing";
 
         // Set current player
-        room.game.currentPlayer = room.players[Math.floor(Math.random() * 2)];
-
-        // Set current symbol
-        room.game.currentSymbol = Math.random() < 0.5 ? "X" : "O";
+        room.game.currentPlayer =
+          Math.floor(Math.random() * 2) === 0
+            ? room.players.player1
+            : room.players.player2;
 
         // Send message to parent thread
         messageOutput = {
@@ -253,31 +268,77 @@ const processMessage = (msg: WorkerMessageInput) => {
       }
       break;
 
+    case "play-again":
+      try {
+        // Set room status to playing
+        room.status = "playing";
+
+        // Set current player
+        room.game.currentPlayer =
+          Math.floor(Math.random() * 2) === 0
+            ? room.players.player1
+            : room.players.player2;
+
+        // Reset board
+        room.game.board = [
+          [null, null, null],
+          [null, null, null],
+          [null, null, null],
+        ];
+
+        // Reset winnerPlayer
+        room.game.winnerPlayer = null;
+
+        // Reset winnerPlayer line
+        room.game.winnerLine = null;
+
+        // Send message to parent thread
+        messageOutput = {
+          type: "play-again-success",
+          data: room,
+        };
+        parentPort?.postMessage(messageOutput);
+      } catch (error) {
+        parentPort?.postMessage({
+          type: "play-again-error",
+          data: error,
+        } as WorkerMessageOutput);
+      }
+      break;
     case "player-plays-move-in-board":
       // Play move in board
       const playMove = msg.data as BoardMove;
       room.game.board[playMove.row][playMove.col] = playMove.symbol;
 
-      // Check if there is a winner
-      const winner = checkWinner(room.game.board);
-      if (!winner) {
-        // Change current player
-        room.game.currentPlayer =
-          room.game.currentPlayer === room.players[0]
-            ? room.players[1]
-            : room.players[0];
+      // Check if there is a winnerPlayer
+      const winnerPlayer = checkWinner(room.game.board);
+      if (!winnerPlayer) {
+        // Check if board is full (draw)
+        const isBoardFull = room.game.board.every(row => 
+          row.every(cell => cell !== null)
+        );
 
-        // Change current symbol
-        room.game.currentSymbol = room.game.currentSymbol === "X" ? "O" : "X";
+        if (isBoardFull) {
+          // Set room status to finished with no winner
+          room.status = "finished";
+          room.game.winnerPlayer = null;
+          room.game.winnerLine = null;
+        } else {
+          // Change current player
+          room.game.currentPlayer =
+            room.game.currentPlayer === room.players.player1
+              ? room.players.player2
+              : room.players.player1;
+        }
       } else {
         // Set room status to finished
         room.status = "finished";
 
-        // Set winner
-        room.game.winner = room.game.currentPlayer;
+        // Set winnerPlayer
+        room.game.winnerPlayer = room.game.currentPlayer;
 
-        // Set winner line
-        room.game.winnerLine = getWinnerLine(room.game.board, winner);
+        // Set winnerPlayer line
+        room.game.winnerLine = getWinnerLine(room.game.board, winnerPlayer);
       }
 
       // Send message to parent thread
@@ -295,7 +356,7 @@ const processMessage = (msg: WorkerMessageInput) => {
 
       // Send message to parent thread
       messageOutput = {
-        type: "message-sent",
+        type: "send-message-success",
         data: {
           roomId: room.id,
           message: sendMessage,
