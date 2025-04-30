@@ -314,15 +314,23 @@ const processMessage = (msg: WorkerMessageInput) => {
       const winnerPlayer = checkWinner(room.game.board);
       if (!winnerPlayer) {
         // Check if board is full (draw)
-        const isBoardFull = room.game.board.every(row => 
-          row.every(cell => cell !== null)
+        const isBoardFull = room.game.board.every((row) =>
+          row.every((cell) => cell !== null)
         );
 
         if (isBoardFull) {
           // Set room status to finished with no winner
           room.status = "finished";
+
+          // Set winnerPlayer
           room.game.winnerPlayer = null;
+
+          // Set winnerPlayer line
           room.game.winnerLine = null;
+
+          // Update player stats for draw
+          room.results.player1.draws++;
+          room.results.player2.draws++;
         } else {
           // Change current player
           room.game.currentPlayer =
@@ -339,6 +347,15 @@ const processMessage = (msg: WorkerMessageInput) => {
 
         // Set winnerPlayer line
         room.game.winnerLine = getWinnerLine(room.game.board, winnerPlayer);
+
+        // Update player stats for winner
+        if (room.game.currentPlayer === room.players.player1) {
+          room.results.player1.wins++;
+          room.results.player2.losses++;
+        } else {
+          room.results.player2.wins++;
+          room.results.player1.losses++;
+        }
       }
 
       // Send message to parent thread

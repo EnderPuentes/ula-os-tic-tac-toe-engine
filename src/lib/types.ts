@@ -54,7 +54,10 @@ export type Room = {
     player1: RoomPlayer | null;
     player2: RoomPlayer | null;
   };
-  results: Record<string, PlayerResult>;
+  results: {
+    player1: PlayerResult;
+    player2: PlayerResult;
+  };
 };
 
 type PlayerAndRoomId = {

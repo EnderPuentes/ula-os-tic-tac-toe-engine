@@ -106,7 +106,18 @@ io.on("connection", (socket) => {
         player1: null,
         player2: null,
       },
-      results: {},
+      results: {
+        player1: {
+          wins: 0,
+          losses: 0,
+          draws: 0,
+        },
+        player2: {
+          wins: 0,
+          losses: 0,
+          draws: 0,
+        },
+      },
     };
 
     // Create room worker
