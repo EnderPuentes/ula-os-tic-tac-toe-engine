@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node -r tsconfig-paths/register' src/server.ts",
-    "start": "node -r tsconfig-paths/register dist/src/server.js"
+    "start": "node -r tsconfig-paths/register dist/server.js"
   },
   "license": "ISC",
   "dependencies": {
