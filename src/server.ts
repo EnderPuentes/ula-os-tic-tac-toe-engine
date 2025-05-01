@@ -284,13 +284,13 @@ io.on("connection", (socket) => {
 
         // Emit player joined to room success
         logger(`Player joined room ${roomId}`, "success");
-        io.emit("player-joined-to-room-success", roomId, player.id);
+        io.emit("join-player-to-room-success", roomId, player.id);
       } else if (messageOutput.type === "join-player-error") {
         const error = messageOutput.data as string;
 
         // Emit join player to room error
         logger(`Room ${roomId} is full`, "error");
-        socket.emit("player-joined-to-room-error", error);
+        socket.emit("join-player-to-room-error", error);
       }
 
       // Remove listener
