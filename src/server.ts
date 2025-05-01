@@ -4,7 +4,6 @@
  * Uses worker threads for concurrent room processing
  */
 
-import crypto from "crypto";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { Worker } from "worker_threads";
@@ -37,43 +36,13 @@ io.on("connection", (socket) => {
   logger("Client connected", "info");
 
   /**
-   * Create player
-   * @param playerName - The name of the player
-   * Creates new player with unique ID and avatar
-   */
-  socket.on("create-player", (playerName: string) => {
-    const playerId = socket.id;
-
-    if (players.has(playerId)) {
-      // Emit player created error
-      logger(`Player already exists`, "error");
-      socket.emit("create-player-error", "Player already exists");
-      return;
-    }
-
-    // Create player
-    const player: Player = {
-      id: playerId,
-      name: playerName,
-      avatar: getAvatarUrl(playerName),
-    };
-
-    // Set player
-    players.set(playerId, player);
-
-    // Emit player created
-    logger(`Player created: ${playerName}`, "success");
-    socket.emit("create-player-success", playerId);
-  });
-
-  /**
    * Create room
    * @param roomName - The name of the room
    * Creates new game room with worker thread
    */
-  socket.on("create-room", (roomName: string) => {
+  socket.on("create-room", (roomName: string, playerName: string) => {
     // Generate room id
-    const roomId = crypto.randomUUID();
+    const roomId = Math.random().toString(36).substring(2, 8);
 
     // Check if room already exists
     if (rooms.has(roomId)) {
@@ -101,7 +70,12 @@ io.on("connection", (socket) => {
         playersTyping: [],
       },
       players: {
-        player1: null,
+        player1: {
+          id: socket.id,
+          name: playerName,
+          avatar: getAvatarUrl(playerName),
+          symbol: "X",
+        },
         player2: null,
       },
       results: {
