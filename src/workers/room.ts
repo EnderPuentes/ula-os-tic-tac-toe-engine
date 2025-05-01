@@ -361,8 +361,8 @@ const processMessage = (msg: WorkerMessageInput) => {
       // Send message to parent thread
       messageOutput = {
         type: "player-plays-move-in-board-success",
-        data: playMove,
-      };
+        data: room.game.winnerPlayer,
+      } as WorkerMessageOutput;
       parentPort?.postMessage(messageOutput);
       break;
 
@@ -384,16 +384,13 @@ const processMessage = (msg: WorkerMessageInput) => {
 
     case "player-typing-on-in-chat-of-room":
       // Add player to typing indicator
-      const playerTypingOn = msg.data as Player;
+      const playerTypingOn = msg.data as RoomPlayer;
       room.chat.playersTyping.push(playerTypingOn);
 
       // Send message to parent thread
       messageOutput = {
         type: "player-typing-on-in-chat-of-room",
-        data: {
-          roomId: room.id,
-          player: playerTypingOn,
-        },
+        data: playerTypingOn,
       };
 
       parentPort?.postMessage(messageOutput);
@@ -401,7 +398,7 @@ const processMessage = (msg: WorkerMessageInput) => {
 
     case "player-typing-off-in-chat-of-room":
       // Remove player from typing indicator
-      const playerTypingOff = msg.data as Player;
+      const playerTypingOff = msg.data as RoomPlayer;
       room.chat.playersTyping = room.chat.playersTyping.filter(
         (p) => p.id !== playerTypingOff.id
       );
@@ -409,10 +406,7 @@ const processMessage = (msg: WorkerMessageInput) => {
       // Send message to parent thread
       messageOutput = {
         type: "player-typing-off-in-chat-of-room",
-        data: {
-          roomId: room.id,
-          player: playerTypingOff,
-        },
+        data: playerTypingOff,
       };
       parentPort?.postMessage(messageOutput);
       break;

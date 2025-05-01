@@ -13,8 +13,6 @@ import type {
   Message,
   MessageSent,
   Player,
-  PlayerTypingOffInChatOfRoom,
-  PlayerTypingOnInChatOfRoom,
   Room,
   WorkerMessageInput,
   WorkerMessageOutput,
@@ -627,19 +625,12 @@ io.on("connection", (socket) => {
 
     // On message
     const onMessage = (messageOutput: WorkerMessageOutput) => {
-      const playerTypingOn: PlayerTypingOnInChatOfRoom =
-        messageOutput.data as PlayerTypingOnInChatOfRoom;
+      const playerTypingOn = messageOutput.data as Player;
 
       if (messageOutput.type === "player-typing-on-in-chat-of-room") {
         // Emit player typing on in chat of room
-        logger(
-          `Player typing on in chat of room ${playerTypingOn.roomId}`,
-          "success"
-        );
-        io.emit(
-          "player-typing-on-in-chat-of-room-success",
-          playerTypingOn.player
-        );
+        logger(`Player typing on in chat of room ${roomId}`, "success");
+        io.emit("player-typing-on-in-chat-of-room-success", playerTypingOn);
       }
     };
 
@@ -688,19 +679,12 @@ io.on("connection", (socket) => {
 
     // On message
     const onMessage = (messageOutput: WorkerMessageOutput) => {
-      const playerTypingOff: PlayerTypingOffInChatOfRoom =
-        messageOutput.data as PlayerTypingOffInChatOfRoom;
+      const playerTypingOff = messageOutput.data as Player;
 
       if (messageOutput.type === "player-typing-off-in-chat-of-room") {
         // Emit player typing off in chat of room
-        logger(
-          `Player typing off in chat of room ${playerTypingOff.roomId}`,
-          "success"
-        );
-        io.emit(
-          "player-typing-off-in-chat-of-room-success",
-          playerTypingOff.player
-        );
+        logger(`Player typing off in chat of room ${roomId}`, "success");
+        io.emit("player-typing-off-in-chat-of-room-success", playerTypingOff);
       }
     };
 

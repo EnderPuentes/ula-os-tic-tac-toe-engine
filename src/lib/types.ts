@@ -60,17 +60,6 @@ export type Room = {
   };
 };
 
-type PlayerAndRoomId = {
-  roomId: string;
-  player: Player;
-};
-
-export type PlayerJoined = PlayerAndRoomId;
-export type PlayerAlreadyInRoom = PlayerAndRoomId;
-export type PlayerLeft = PlayerAndRoomId;
-export type PlayerTypingOnInChatOfRoom = PlayerAndRoomId;
-export type PlayerTypingOffInChatOfRoom = PlayerAndRoomId;
-
 export type MessageSent = {
   roomId: string;
   message: Message;
@@ -107,16 +96,5 @@ export type WorkerMessageOutput = {
     | "start-game-error"
     | "play-again-success"
     | "play-again-error";
-  data:
-    | Room
-    | Player
-    | Message
-    | PlayerJoined
-    | PlayerAlreadyInRoom
-    | PlayerLeft
-    | PlayerTypingOnInChatOfRoom
-    | PlayerTypingOffInChatOfRoom
-    | MessageSent
-    | BoardMove
-    | string;
+  data: Room | RoomPlayer | Message | MessageSent | BoardMove | string;
 };
