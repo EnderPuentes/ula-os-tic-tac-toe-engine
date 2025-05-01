@@ -108,26 +108,6 @@ io.on("connection", (socket) => {
   });
 
   /**
-   * Get players
-   * Returns list of all connected players
-   */
-  socket.on("get-players", async () => {
-    // Check if there are no players
-    if (players.size === 0) {
-      // Emit empty players data
-      logger(`No players found`, "info");
-      io.emit("players", []);
-    } else {
-      // Get players data
-      const playersData: Player[] = Array.from(players.values());
-
-      // Emit players data
-      logger(`Players fetched: ${players.size}`, "info");
-      io.emit("players", playersData);
-    }
-  });
-
-  /**
    * Get rooms
    * Returns list of all active game rooms
    */
