@@ -11,7 +11,6 @@ import { Worker } from "worker_threads";
 import type {
   BoardMove,
   Message,
-  MessageSent,
   Player,
   Room,
   RoomPlayer,
@@ -567,18 +566,15 @@ io.on("connection", (socket) => {
 
       // On message
       const onMessage = (messageOutput: WorkerMessageOutput) => {
-        const messageSent: MessageSent = messageOutput.data as MessageSent;
+        const messageSent: Message = messageOutput.data as Message;
         if (messageOutput.type === "send-message-success") {
           // Emit message sent
-          logger(`Message sent to room ${messageSent.roomId}`, "success");
-          io.emit(
-            "player-send-message-in-chat-of-room-success",
-            messageSent.message
-          );
+          logger(`Message sent to room ${roomId}`, "success");
+          io.emit("player-send-message-in-chat-of-room-success", messageSent);
         } else if (messageOutput.type === "send-message-error") {
           const error = messageOutput.data as string;
           // Emit send message to room error
-          logger(`Message not sent to room ${messageSent.roomId}`, "error");
+          logger(`Message not sent to room ${roomId}`, "error");
           io.emit("send-message-to-room-error", error);
         }
 

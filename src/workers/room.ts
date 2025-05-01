@@ -368,16 +368,21 @@ const processMessage = (msg: WorkerMessageInput) => {
 
     case "send-message":
       // Add new chat message
-      const sendMessage = msg.data as Message;
-      room.chat.messages.push(sendMessage);
+      const newMessage = msg.data as Message;
+
+      // Set sender (player1 or player2)
+      newMessage.sender =
+        newMessage.sender?.id === room.players.player1?.id
+          ? room.players.player1
+          : room.players.player2;
+
+      // Add message to chat
+      room.chat.messages.push(newMessage);
 
       // Send message to parent thread
       messageOutput = {
         type: "send-message-success",
-        data: {
-          roomId: room.id,
-          message: sendMessage,
-        },
+        data: newMessage,
       };
       parentPort?.postMessage(messageOutput);
       break;

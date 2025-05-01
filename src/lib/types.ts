@@ -15,7 +15,7 @@ export type Chat = {
 
 export type Message = {
   content: string;
-  sender: Player;
+  sender: RoomPlayer | null;
   timestamp: number;
 };
 
@@ -60,11 +60,6 @@ export type Room = {
   };
 };
 
-export type MessageSent = {
-  roomId: string;
-  message: Message;
-};
-
 export type WorkerMessageInput = {
   type:
     | "get-data"
@@ -96,5 +91,5 @@ export type WorkerMessageOutput = {
     | "start-game-error"
     | "play-again-success"
     | "play-again-error";
-  data: Room | RoomPlayer | Message | MessageSent | BoardMove | string;
+  data: Room | RoomPlayer | Message | BoardMove | string;
 };
