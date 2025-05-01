@@ -2,9 +2,6 @@ export type Player = {
   id: string;
   name: string;
   avatar: string;
-};
-
-export type RoomPlayer = Player & {
   symbol: BoardSymbol;
 };
 
@@ -15,7 +12,7 @@ export type Chat = {
 
 export type Message = {
   content: string;
-  sender: RoomPlayer | null;
+  sender: Player | null;
   timestamp: number;
 };
 
@@ -39,8 +36,8 @@ export type PlayerResult = {
 
 export type Game = {
   board: BoardSymbol[][];
-  currentPlayer: RoomPlayer | null;
-  winnerPlayer: RoomPlayer | null;
+  currentPlayer: Player | null;
+  winnerPlayer: Player | null;
   winnerLine: [CellPosition, CellPosition, CellPosition] | null;
 };
 
@@ -51,8 +48,8 @@ export type Room = {
   game: Game;
   chat: Chat;
   players: {
-    player1: RoomPlayer | null;
-    player2: RoomPlayer | null;
+    player1: Player | null;
+    player2: Player | null;
   };
   results: {
     player1: PlayerResult;
@@ -61,6 +58,7 @@ export type Room = {
 };
 
 export type WorkerMessageInput = {
+  id?: string;
   type:
     | "get-data"
     | "join-player"
@@ -71,10 +69,12 @@ export type WorkerMessageInput = {
     | "player-plays-move-in-board"
     | "start-game"
     | "play-again";
-  data: Message | Player | Room | BoardMove | null;
+  socketId: string;
+  data: Message | Player | Room | BoardMove | string | null;
 };
 
 export type WorkerMessageOutput = {
+  id?: string;
   type:
     | "data"
     | "join-player-error"
@@ -83,13 +83,16 @@ export type WorkerMessageOutput = {
     | "leave-player-error"
     | "send-message-success"
     | "send-message-error"
-    | "player-typing-on-in-chat-of-room"
-    | "player-typing-off-in-chat-of-room"
+    | "player-typing-on-in-chat-of-room-success"
+    | "player-typing-on-in-chat-of-room-error"
+    | "player-typing-off-in-chat-of-room-success"
+    | "player-typing-off-in-chat-of-room-error"
     | "player-plays-move-in-board-success"
     | "player-plays-move-in-board-error"
     | "start-game-success"
     | "start-game-error"
     | "play-again-success"
-    | "play-again-error";
-  data: Room | RoomPlayer | Message | BoardMove | string;
+    | "play-again-error"
+    | "unknown-message";
+  data: Room | Player | BoardMove | string | null | Error;
 };
