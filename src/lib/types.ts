@@ -58,7 +58,7 @@ export type Room = {
 };
 
 export type WorkerMessageInput = {
-  id?: string;
+  id: string;
   type:
     | "get-data"
     | "join-player"
@@ -74,25 +74,7 @@ export type WorkerMessageInput = {
 };
 
 export type WorkerMessageOutput = {
-  id?: string;
-  type:
-    | "data"
-    | "join-player-error"
-    | "join-player-success"
-    | "leave-player-success"
-    | "leave-player-error"
-    | "send-message-success"
-    | "send-message-error"
-    | "player-typing-on-in-chat-of-room-success"
-    | "player-typing-on-in-chat-of-room-error"
-    | "player-typing-off-in-chat-of-room-success"
-    | "player-typing-off-in-chat-of-room-error"
-    | "player-plays-move-in-board-success"
-    | "player-plays-move-in-board-error"
-    | "start-game-success"
-    | "start-game-error"
-    | "play-again-success"
-    | "play-again-error"
-    | "unknown-message";
+  id: string;
+  status: "success" | "error";
   data: Room | Player | BoardMove | string | null | Error;
 };

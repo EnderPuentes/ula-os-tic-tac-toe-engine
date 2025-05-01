@@ -176,7 +176,8 @@ function processMessage(msg: WorkerMessageInput) {
     case "get-data":
       // Send message to parent thread
       sendMessage({
-        type: "data",
+        id: msg.id,
+        status: "success",
         data: room,
       });
       break;
@@ -189,7 +190,8 @@ function processMessage(msg: WorkerMessageInput) {
           room.players.player2?.id === socketId
         ) {
           sendMessage({
-            type: "join-player-error",
+            id: msg.id,
+            status: "error",
             data: `Player is already in room ${room.name}`,
           });
           break;
@@ -198,7 +200,8 @@ function processMessage(msg: WorkerMessageInput) {
         // Check if room is full
         if (room.players.player1 && room.players.player2) {
           sendMessage({
-            type: "join-player-error",
+            id: msg.id,
+            status: "error",
             data: `Room ${room.name} is full`,
           });
           break;
@@ -229,13 +232,15 @@ function processMessage(msg: WorkerMessageInput) {
 
         // Send message to parent thread
         sendMessage({
-          type: "join-player-success",
+          id: msg.id,
+          status: "success",
           data: null,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
-          type: "join-player-error",
+          id: msg.id,
+          status: "error",
           data: error as Error,
         });
       }
@@ -256,13 +261,15 @@ function processMessage(msg: WorkerMessageInput) {
 
         // Send message to parent thread
         sendMessage({
-          type: "leave-player-success",
+          id: msg.id,
+          status: "success",
           data: leavePlayer,
         });
       } catch (error) {
         // Send message to parent thread with error
-        parentPort?.postMessage({
-          type: "leave-player-error",
+        sendMessage({
+          id: msg.id,
+          status: "error",
           data: error as Error,
         });
       }
@@ -273,7 +280,8 @@ function processMessage(msg: WorkerMessageInput) {
         // Check if room is full
         if (!room.players.player1 || !room.players.player2) {
           sendMessage({
-            type: "start-game-error",
+            id: msg.id,
+            status: "error",
             data: "Room is not full",
           });
           return;
@@ -287,13 +295,15 @@ function processMessage(msg: WorkerMessageInput) {
 
         // Send message to parent thread
         sendMessage({
-          type: "start-game-success",
+          id: msg.id,
+          status: "success",
           data: null,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
-          type: "start-game-error",
+          id: msg.id,
+          status: "error",
           data: error as Error,
         });
       }
@@ -304,7 +314,8 @@ function processMessage(msg: WorkerMessageInput) {
         // Check if room is full
         if (!room.players.player1 || !room.players.player2) {
           sendMessage({
-            type: "play-again-error",
+            id: msg.id,
+            status: "error",
             data: "Room is not full",
           });
           return;
@@ -331,13 +342,15 @@ function processMessage(msg: WorkerMessageInput) {
 
         // Send message to parent thread
         sendMessage({
-          type: "play-again-success",
+          id: msg.id,
+          status: "success",
           data: null,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
-          type: "play-again-error",
+          id: msg.id,
+          status: "error",
           data: error as Error,
         });
       }
@@ -399,13 +412,15 @@ function processMessage(msg: WorkerMessageInput) {
 
         // Send message to parent thread
         sendMessage({
-          type: "player-plays-move-in-board-success",
+          id: msg.id,
+          status: "success",
           data: room.game.winnerPlayer,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
-          type: "player-plays-move-in-board-error",
+          id: msg.id,
+          status: "error",
           data: error as Error,
         });
       }
@@ -421,13 +436,15 @@ function processMessage(msg: WorkerMessageInput) {
 
         // Send message to parent thread
         sendMessage({
-          type: "player-typing-on-in-chat-of-room-success",
+          id: msg.id,
+          status: "success",
           data: playerTypingOn,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
-          type: "player-typing-on-in-chat-of-room-error",
+          id: msg.id,
+          status: "error",
           data: error as Error,
         });
       }
@@ -442,13 +459,15 @@ function processMessage(msg: WorkerMessageInput) {
 
         // Send message to parent thread
         sendMessage({
-          type: "player-typing-off-in-chat-of-room-success",
+          id: msg.id,
+          status: "success",
           data: null,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
-          type: "player-typing-off-in-chat-of-room-error",
+          id: msg.id,
+          status: "error",
           data: error as Error,
         });
       }
@@ -474,13 +493,15 @@ function processMessage(msg: WorkerMessageInput) {
 
         // Send message to parent thread
         sendMessage({
-          type: "send-message-success",
+          id: msg.id,
+          status: "success",
           data: null,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
-          type: "send-message-error",
+          id: msg.id,
+          status: "error",
           data: error as Error,
         });
       }
@@ -489,7 +510,8 @@ function processMessage(msg: WorkerMessageInput) {
     default:
       // Handle unknown message types
       sendMessage({
-        type: "unknown-message",
+        id: msg.id,
+        status: "error",
         data: new Error("Unknown message type"),
       });
   }
