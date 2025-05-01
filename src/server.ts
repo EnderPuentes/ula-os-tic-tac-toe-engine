@@ -14,6 +14,7 @@ import type {
   MessageSent,
   Player,
   Room,
+  RoomPlayer,
   WorkerMessageInput,
   WorkerMessageOutput,
 } from "./lib/types";
@@ -498,6 +499,12 @@ io.on("connection", (socket) => {
         if (messageOutput.type === "player-plays-move-in-board-success") {
           // Emit play move in board success
           io.emit("player-plays-move-in-board-of-room-success", roomId);
+
+          const playerWinner = messageOutput.data as RoomPlayer;
+          if (playerWinner) {
+            // Emit player wins
+            io.emit("player-wins-in-board-of-room", roomId);
+          }
         } else if (messageOutput.type === "player-plays-move-in-board-error") {
           // Emit play move in board error
           logger(`Play move in board error`, "error");
