@@ -274,47 +274,6 @@ io.on("connection", (socket) => {
   });
 
   /**
-   * Start game in room
-   * @param roomId - Room ID
-   * Starts the game in the specified room
-   */
-  socket.on("start-game-in-room", (roomId: string) => {
-    logger(`[Game] Starting game in room ${roomId}`, "info");
-
-    const roomWorker: Worker | undefined = rooms.get(roomId);
-    if (!roomWorker) {
-      logger("[Room] Room not found", "error");
-      io.emit("start-game-in-room-error", `Room ${roomId} not found`);
-      return;
-    }
-
-    const messageId = crypto.randomUUID();
-    roomWorker.postMessage({
-      id: messageId,
-      type: "start-game",
-      socketId: socket.id,
-      data: null,
-    });
-
-    const onMessage = (messageOutput: WorkerMessageOutput) => {
-      if (messageOutput.id === messageId) {
-        if (messageOutput.status === "success") {
-          logger(`[Game] Started game in room ${roomId}`, "success");
-          io.emit("start-game-in-room-success", roomId);
-        } else {
-          const error = messageOutput.data as string;
-          logger(`[Game] Start failed - ${error}`, "error");
-          io.emit("start-game-in-room-error", error);
-        }
-
-        roomWorker.off("message", onMessage);
-      }
-    };
-
-    roomWorker.on("message", onMessage);
-  });
-
-  /**
    * Play again in room
    * @param roomId - Room ID
    * Restarts game in the specified room

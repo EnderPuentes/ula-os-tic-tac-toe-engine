@@ -97,9 +97,12 @@ function processMessage(msg: WorkerMessageInput) {
           room.players.player1 = newPlayer;
         }
 
-        // Set room status to done
+        // Set room status to playing
         if (room.players.player1 && room.players.player2) {
-          room.status = "done";
+          room.status = "playing";
+
+          // Set current player
+          room.game.currentPlayer = room.players.player1;
         }
 
         // Send message to parent thread
@@ -126,40 +129,6 @@ function processMessage(msg: WorkerMessageInput) {
         } else if (room.players.player2?.id === socketId) {
           room.players.player2 = null;
         }
-
-        // Send message to parent thread
-        sendMessage({
-          id: msg.id,
-          status: "success",
-          data: null,
-        });
-      } catch (error) {
-        // Send message to parent thread with error
-        sendMessage({
-          id: msg.id,
-          status: "error",
-          data: error as Error,
-        });
-      }
-      break;
-
-    case "start-game":
-      try {
-        // Check if room is full
-        if (!room.players.player1 || !room.players.player2) {
-          sendMessage({
-            id: msg.id,
-            status: "error",
-            data: "Room is not full",
-          });
-          return;
-        }
-
-        // Set current player
-        room.game.currentPlayer = room.players.player1;
-
-        // Set status to playing
-        room.status = "playing";
 
         // Send message to parent thread
         sendMessage({
