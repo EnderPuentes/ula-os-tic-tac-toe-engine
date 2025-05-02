@@ -19,7 +19,11 @@ import { getAvatarUrl, logger } from "./lib/utils";
 // Create HTTP and Socket.IO servers
 const httpServer = createServer();
 const io = new Server(httpServer, {
-  cors: { origin: process.env.CLIENT_GAME_URL || false },
+  cors: {
+    origin:
+      process.env.CLIENT_GAME_URL ||
+      "https://tic-tac-toe-game-endev.vercel.app",
+  },
 });
 
 // Store connected players and active game rooms
