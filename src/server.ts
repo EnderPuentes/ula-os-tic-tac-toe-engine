@@ -644,90 +644,84 @@ io.on("connection", (socket) => {
    * Removes player from game and cleans up rooms
    */
   socket.on("disconnect", async () => {
-    return;
-    // logger(`Player disconnected: ${socket.id}`, "warn");
+    logger(`Player disconnected: ${socket.id}`, "warn");
+    logger(`Fetching rooms data`, "info");
 
-    // /*
-    //  * Check if player is in any room with 'playing' status
-    //  */
-    // logger(`Checking if player is in any room with 'playing' status`, "info");
+    // Get all rooms data by querying each worker
+    const dataPromises = Array.from(rooms.values()).map(
+      (worker) =>
+        new Promise<Room>((resolve) => {
+          const messageId = crypto.randomUUID();
+          
+          // Query worker for room data
+          worker.postMessage({
+            id: messageId,
+            type: "get-data",
+            socketId: socket.id,
+            data: null,
+          });
 
-    // // Get rooms data
-    // const roomsData: Room[] = await Promise.all(
-    //   Array.from(rooms.values()).map(
-    //     (worker) =>
-    //       new Promise<Room>((resolve) => {
-    //         // On message
-    //         const onMessage = (messageOutput: WorkerMessageOutput) => {
-    //           resolve(messageOutput.data as Room);
-    //           worker.off("message", onMessage);
-    //         };
+          // Handle worker response
+          const onMessage = (messageOutput: WorkerMessageOutput) => {
+            if (messageOutput.id === messageId) {
+              if (messageOutput.status === "success") {
+                resolve(messageOutput.data as Room);
+              }
+              worker.off("message", onMessage);
+            }
+          };
 
-    //         // Listen for messages
-    //         worker.on("message", onMessage);
+          worker.on("message", onMessage);
+        })
+    );
 
-    //         // Send message to worker
-    //         const messageInput: WorkerMessageInput = {
-    //           type: "get-data",
-    //           socketId: socket.id,
-    //           data: null,
-    //         };
-    //         worker.postMessage(messageInput);
-    //       })
-    //   )
-    // );
+    const roomsData: Room[] = await Promise.all(dataPromises);
 
-    // // Check if player is in any room with 'playing' status
-    // const room = roomsData.find(
-    //   (room) =>
-    //     room.players.player1?.id === socket.id ||
-    //     room.players.player2?.id === socket.id
-    // );
+    logger(`Looking for player's room`, "info");
+    
+    // Find room containing the disconnected player
+    const room = roomsData.find((room) => 
+      room.players.player1?.id === socket.id || 
+      room.players.player2?.id === socket.id
+    );
 
-    // if (!room) {
-    //   // Emit player left
-    //   logger(`Player left, not in any room`, "success");
-    //   io.emit("player-left", socket.id);
-    //   return;
-    // }
+    if (!room) {
+      logger(`No room found for disconnected player`, "warn");
+      return;
+    }
 
-    // if (room?.status === "done") {
-    //   const roomWorker: Worker | undefined = rooms.get(room.id);
-    //   if (!roomWorker) {
-    //     // Emit send message to room error
-    //     logger(`Room not found`, "error");
-    //     return;
-    //   }
+    // Get the worker managing this room
+    const roomWorker = rooms.get(room.id);
+    if (!roomWorker) {
+      logger(`Room worker not found for room ${room.id}`, "error");
+      return;
+    }
 
-    //   // Create message to send to room worker
-    //   const messageInput: WorkerMessageInput = {
-    //     type: "leave-player",
-    //     socketId: socket.id,
-    //     data: null,
-    //   };
+    // Notify room worker about player leaving
+    const messageId = crypto.randomUUID();
+    roomWorker.postMessage({
+      id: messageId,
+      type: "leave-player", 
+      socketId: socket.id,
+      data: null,
+    });
 
-    //   // Send message to room worker
-    //   roomWorker.postMessage(messageInput);
+    // Handle room worker response
+    const onMessage = (messageOutput: WorkerMessageOutput) => {
+      if (messageOutput.id === messageId) {
+        if (messageOutput.status === "success") {
+          logger(`Player successfully removed from room ${room.id}`, "success");
+          io.emit("leave-player-from-room-success", room.id, socket.id);
+        } else {
+          const error = messageOutput.data as string;
+          logger(`Failed to remove player: ${error}`, "error");
+          socket.emit("leave-player-from-room-error", error);
+        }
+        roomWorker.off("message", onMessage);
+      }
+    };
 
-    //   // On message
-    //   const onMessage = (messageOutput: WorkerMessageOutput) => {
-    //     if (messageOutput.type === "leave-player-success") {
-    //       // Emit player left
-    //       logger(`Player left room ${room.id}`, "success");
-    //       io.emit("player-left", messageOutput.data);
-    //     } else if (messageOutput.type === "leave-player-error") {
-    //       const error = messageOutput.data as string;
-    //       // Emit leave player from room error
-    //       logger(error, "error");
-    //     }
-
-    //     // Remove listener
-    //     roomWorker.off("message", onMessage);
-    //   };
-
-    //   // Listen for messages from room worker
-    //   roomWorker.on("message", onMessage);
-    // }
+    roomWorker.on("message", onMessage);
   });
 });
 
