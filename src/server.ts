@@ -18,6 +18,7 @@ import { getAvatarUrl, logger } from "./lib/utils";
 
 // Create HTTP and Socket.IO servers
 const httpServer = createServer();
+const CLIENT_GAME_URL = process.env.CLIENT_GAME_URL || "http://localhost:3000";
 const io = new Server(httpServer, {
   cors: {
     origin: "*",
@@ -604,12 +605,12 @@ io.on("connection", (socket) => {
  * Start HTTP server
  * Listens on port
  */
-httpServer.listen(process.env.PORT ?? 3000, () => {
+
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, () => {
   logger(`------------------------------------------------`, "info");
   logger(
-    `[Server] Socket server listening on http://localhost:${
-      process.env.PORT ?? 3000
-    }`,
+    `[Server] Socket server listening on http://localhost:${PORT}`,
     "info"
   );
   logger(`------------------------------------------------\n`, "info");
