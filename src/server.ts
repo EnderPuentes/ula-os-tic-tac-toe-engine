@@ -561,7 +561,7 @@ io.on("connection", (socket) => {
       (worker) =>
         new Promise<Room>((resolve) => {
           const messageId = crypto.randomUUID();
-          
+
           worker.postMessage({
             id: messageId,
             type: "get-data",
@@ -585,10 +585,11 @@ io.on("connection", (socket) => {
     const roomsData: Room[] = await Promise.all(dataPromises);
 
     logger(`[Room] Looking for player's room`, "info");
-    
-    const room = roomsData.find((room) => 
-      room.players.player1?.id === socket.id || 
-      room.players.player2?.id === socket.id
+
+    const room = roomsData.find(
+      (room) =>
+        room.players.player1?.id === socket.id ||
+        room.players.player2?.id === socket.id
     );
 
     if (!room) {
@@ -605,7 +606,7 @@ io.on("connection", (socket) => {
     const messageId = crypto.randomUUID();
     roomWorker.postMessage({
       id: messageId,
-      type: "leave-player", 
+      type: "leave-player",
       socketId: socket.id,
       data: null,
     });
@@ -630,10 +631,15 @@ io.on("connection", (socket) => {
 
 /**
  * Start HTTP server
- * Listens on port 3001
+ * Listens on port
  */
-httpServer.listen(3001, () => {
+httpServer.listen(process.env.PORT ?? 3000, () => {
   logger(`------------------------------------------------`, "info");
-  logger(`[Server] Socket server listening on http://localhost:3001`, "info");
+  logger(
+    `[Server] Socket server listening on http://localhost:${
+      process.env.PORT ?? 3000
+    }`,
+    "info"
+  );
   logger(`------------------------------------------------\n`, "info");
 });
