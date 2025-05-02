@@ -20,9 +20,7 @@ import { getAvatarUrl, logger } from "./lib/utils";
 const httpServer = createServer();
 const io = new Server(httpServer, {
   cors: {
-    origin:
-      process.env.CLIENT_GAME_URL ||
-      "https://tic-tac-toe-game-endev.vercel.app",
+    origin: "*",
   },
 });
 
