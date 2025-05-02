@@ -39,7 +39,7 @@ io.on("connection", (socket) => {
    * Creates new game room with worker thread
    */
   socket.on("create-room", (roomName: string, playerName: string) => {
-    const roomId = crypto.randomUUID();
+    const roomId = Math.random().toString(36).substring(2, 8);
 
     if (rooms.has(roomId)) {
       logger("[Room] Creation failed - Room already exists", "error");
