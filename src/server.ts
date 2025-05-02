@@ -577,7 +577,14 @@ io.on("connection", (socket) => {
           io.emit("leave-player-from-room-success", room.id, socket.id);
 
           // Delete room if it's empty
+          logger(`[Room] Deleting empty room ${room.id}`, "info");
           rooms.delete(room.id);
+
+          // Emit event
+          io.emit(
+            "rooms",
+            roomsData.filter((room) => room.id === room.id)
+          );
         } else {
           const error = messageOutput.data as string;
           logger(`[Room] Player removal failed - ${error}`, "error");
