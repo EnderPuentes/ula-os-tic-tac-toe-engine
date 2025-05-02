@@ -37,7 +37,6 @@ function processMessage(msg: WorkerMessageInput) {
   // If already processing a message, add to queue
   if (isProcessing) {
     queue.push(msg);
-    console.log("queue", queue);
     return;
   }
 
@@ -121,14 +120,10 @@ function processMessage(msg: WorkerMessageInput) {
 
     case "leave-player":
       try {
-        let leavePlayer: Player | null = null;
-
         // Remove player from room
         if (room.players.player1?.id === socketId) {
-          leavePlayer = room.players.player1;
           room.players.player1 = null;
         } else if (room.players.player2?.id === socketId) {
-          leavePlayer = room.players.player2;
           room.players.player2 = null;
         }
 
@@ -136,7 +131,7 @@ function processMessage(msg: WorkerMessageInput) {
         sendMessage({
           id: msg.id,
           status: "success",
-          data: leavePlayer,
+          data: null,
         });
       } catch (error) {
         // Send message to parent thread with error
