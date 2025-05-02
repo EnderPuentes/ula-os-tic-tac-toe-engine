@@ -5,16 +5,16 @@ export const logger = (
   const timestamp = new Date().toLocaleString();
   switch (type) {
     case "info":
-      console.log(`[${timestamp}] ${message}`);
+      console.log(`[${timestamp}][INFO] ${message}`);
       break;
     case "error":
-      console.error(`❌ [${timestamp}] ${message}`);
+      console.error(`[${timestamp}][ERROR] ${message} ❌ `);
       break;
     case "warn":
-      console.warn(`⚠️ [${timestamp}] ${message}`);
+      console.warn(`[${timestamp}][WARN] ${message} ⚠️ `);
       break;
     case "success":
-      console.log(`✅ [${timestamp}] ${message}`);
+      console.log(`[${timestamp}][SUCCESS] ${message} ✅ `);
       break;
   }
 };
