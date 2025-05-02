@@ -14,8 +14,8 @@ import type {
   WorkerMessageInput,
   WorkerMessageOutput,
 } from "./lib/types";
-import { logger } from "./lib/utils";
-import { getAvatarUrl } from "./workers/room";
+import { getAvatarUrl, logger } from "./lib/utils";
+
 // Create HTTP and Socket.IO servers
 const httpServer = createServer();
 const io = new Server(httpServer, {
