@@ -19,7 +19,7 @@ import { getAvatarUrl, logger } from "./lib/utils";
 // Create HTTP and Socket.IO servers
 const httpServer = createServer();
 const io = new Server(httpServer, {
-  cors: { origin: "*" },
+  cors: { origin: process.env.CLIENT_GAME_URL || false },
 });
 
 // Store connected players and active game rooms
