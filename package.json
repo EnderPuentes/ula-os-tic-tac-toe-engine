@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "tictactoe-engine",
   "description": "A simple multiplayer game engine for Tic Tac Toe",
   "author": "Ender Puentes <endpuent@gmail.com>",
