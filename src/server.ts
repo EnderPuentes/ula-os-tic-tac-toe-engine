@@ -100,7 +100,6 @@ io.on("connection", (socket) => {
 
     // Emit room created
     logger(`Room created: ${roomName}`, "success");
-    console.log("rooms", rooms.size);
     socket.emit("create-room-success", roomId, socket.id);
   });
 
@@ -289,11 +288,13 @@ io.on("connection", (socket) => {
     const onMessage = (messageOutput: WorkerMessageOutput) => {
       if (messageOutput.id === messageId) {
         if (messageOutput.status === "success") {
-          const player = messageOutput.data as Player;
-
           // Emit player leave
           logger(`Player leave room ${roomId}`, "success");
-          io.emit("leave-player-from-room-success", roomId, player);
+          io.emit("leave-player-from-room-success", roomId, socket.id);
+
+          // Check if room is empty
+          logger(`Deleting room ${roomId}`, "info");
+          rooms.delete(roomId);
         } else {
           const error = messageOutput.data as string;
 
