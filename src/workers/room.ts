@@ -1,4 +1,4 @@
-import { parentPort, workerData } from "worker_threads";
+import { parentPort, workerData } from 'worker_threads';
 
 import {
   BoardMove,
@@ -7,9 +7,9 @@ import {
   Room,
   WorkerMessageInput,
   WorkerMessageOutput,
-} from "@/lib/types";
-import { checkWinner, getWinnerLine } from "../lib/game";
-import { getAvatarUrl } from "../lib/utils";
+} from '@/lib/types';
+import { checkWinner, getWinnerLine } from '../lib/game';
+import { getAvatarUrl } from '../lib/utils';
 
 // Flag to track if a message is currently being processed
 let isProcessing = false;
@@ -45,16 +45,16 @@ function processMessage(msg: WorkerMessageInput) {
   const socketId: string = msg.socketId;
 
   switch (msg.type) {
-    case "get-data":
+    case 'get-data':
       // Send message to parent thread
       sendMessage({
         id: msg.id,
-        status: "success",
+        status: 'success',
         data: room,
       });
       break;
 
-    case "join-player":
+    case 'join-player':
       try {
         // Check if player is already in room
         if (
@@ -63,7 +63,7 @@ function processMessage(msg: WorkerMessageInput) {
         ) {
           sendMessage({
             id: msg.id,
-            status: "error",
+            status: 'error',
             data: `Player is already in room ${room.name}`,
           });
           break;
@@ -73,7 +73,7 @@ function processMessage(msg: WorkerMessageInput) {
         if (room.players.player1 && room.players.player2) {
           sendMessage({
             id: msg.id,
-            status: "error",
+            status: 'error',
             data: `Room ${room.name} is full`,
           });
           break;
@@ -87,7 +87,7 @@ function processMessage(msg: WorkerMessageInput) {
           id: socketId,
           name: playerName,
           avatar: getAvatarUrl(playerName),
-          symbol: room.players.player1 ? "O" : "X",
+          symbol: room.players.player1 ? 'O' : 'X',
         };
 
         // Set player in room
@@ -99,7 +99,7 @@ function processMessage(msg: WorkerMessageInput) {
 
         // Set room status to playing
         if (room.players.player1 && room.players.player2) {
-          room.status = "playing";
+          room.status = 'playing';
 
           // Set current player
           room.game.currentPlayer = room.players.player1;
@@ -108,20 +108,20 @@ function processMessage(msg: WorkerMessageInput) {
         // Send message to parent thread
         sendMessage({
           id: msg.id,
-          status: "success",
+          status: 'success',
           data: null,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
           id: msg.id,
-          status: "error",
+          status: 'error',
           data: error as Error,
         });
       }
       break;
 
-    case "leave-player":
+    case 'leave-player':
       try {
         // Remove player from room
         if (room.players.player1?.id === socketId) {
@@ -133,33 +133,33 @@ function processMessage(msg: WorkerMessageInput) {
         // Send message to parent thread
         sendMessage({
           id: msg.id,
-          status: "success",
+          status: 'success',
           data: null,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
           id: msg.id,
-          status: "error",
+          status: 'error',
           data: error as Error,
         });
       }
       break;
 
-    case "play-again":
+    case 'play-again':
       try {
         // Check if room is full
         if (!room.players.player1 || !room.players.player2) {
           sendMessage({
             id: msg.id,
-            status: "error",
-            data: "Room is not full",
+            status: 'error',
+            data: 'Room is not full',
           });
           return;
         }
 
         // Set status to playing
-        room.status = "playing";
+        room.status = 'playing';
 
         // Set current player
         room.game.currentPlayer = room.players.player1;
@@ -180,20 +180,20 @@ function processMessage(msg: WorkerMessageInput) {
         // Send message to parent thread
         sendMessage({
           id: msg.id,
-          status: "success",
+          status: 'success',
           data: null,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
           id: msg.id,
-          status: "error",
+          status: 'error',
           data: error as Error,
         });
       }
       break;
 
-    case "player-plays-move-in-board":
+    case 'player-plays-move-in-board':
       try {
         // Play move in board
         const playMove = msg.data as BoardMove;
@@ -204,12 +204,12 @@ function processMessage(msg: WorkerMessageInput) {
         if (!winnerPlayer) {
           // Check if board is full (draw)
           const isBoardFull = room.game.board.every((row) =>
-            row.every((cell) => cell !== null)
+            row.every((cell) => cell !== null),
           );
 
           if (isBoardFull) {
             // Set room status to finished with no winner
-            room.status = "finished";
+            room.status = 'finished';
 
             // Set winnerPlayer
             room.game.winnerPlayer = null;
@@ -229,7 +229,7 @@ function processMessage(msg: WorkerMessageInput) {
           }
         } else {
           // Set room status to finished
-          room.status = "finished";
+          room.status = 'finished';
 
           // Set winnerPlayer
           room.game.winnerPlayer = room.game.currentPlayer;
@@ -250,20 +250,20 @@ function processMessage(msg: WorkerMessageInput) {
         // Send message to parent thread
         sendMessage({
           id: msg.id,
-          status: "success",
+          status: 'success',
           data: room.game.winnerPlayer,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
           id: msg.id,
-          status: "error",
+          status: 'error',
           data: error as Error,
         });
       }
       break;
 
-    case "player-typing-on-in-chat-of-room":
+    case 'player-typing-on-in-chat-of-room':
       try {
         // Add player to typing indicator
         const playerTypingOn =
@@ -274,43 +274,43 @@ function processMessage(msg: WorkerMessageInput) {
         // Send message to parent thread
         sendMessage({
           id: msg.id,
-          status: "success",
+          status: 'success',
           data: playerTypingOn,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
           id: msg.id,
-          status: "error",
+          status: 'error',
           data: error as Error,
         });
       }
       break;
 
-    case "player-typing-off-in-chat-of-room":
+    case 'player-typing-off-in-chat-of-room':
       try {
         // Remove player from typing indicator
         room.chat.playersTyping = room.chat.playersTyping.filter(
-          (p) => p.id !== socketId
+          (p) => p.id !== socketId,
         );
 
         // Send message to parent thread
         sendMessage({
           id: msg.id,
-          status: "success",
+          status: 'success',
           data: null,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
           id: msg.id,
-          status: "error",
+          status: 'error',
           data: error as Error,
         });
       }
       break;
 
-    case "send-message":
+    case 'send-message':
       try {
         // Get content
         const content = msg.data as string;
@@ -331,14 +331,14 @@ function processMessage(msg: WorkerMessageInput) {
         // Send message to parent thread
         sendMessage({
           id: msg.id,
-          status: "success",
+          status: 'success',
           data: null,
         });
       } catch (error) {
         // Send message to parent thread with error
         sendMessage({
           id: msg.id,
-          status: "error",
+          status: 'error',
           data: error as Error,
         });
       }
@@ -348,8 +348,8 @@ function processMessage(msg: WorkerMessageInput) {
       // Handle unknown message types
       sendMessage({
         id: msg.id,
-        status: "error",
-        data: new Error("Unknown message type"),
+        status: 'error',
+        data: new Error('Unknown message type'),
       });
   }
 
@@ -365,6 +365,6 @@ function processMessage(msg: WorkerMessageInput) {
 }
 
 // Set up message listener for parent thread communication
-parentPort?.on("message", (msg) => {
+parentPort?.on('message', (msg) => {
   processMessage(msg);
 });

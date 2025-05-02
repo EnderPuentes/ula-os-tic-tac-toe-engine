@@ -1,19 +1,19 @@
 export const logger = (
   message: string,
-  type: "info" | "error" | "warn" | "success"
+  type: 'info' | 'error' | 'warn' | 'success',
 ) => {
   const timestamp = new Date().toLocaleString();
   switch (type) {
-    case "info":
+    case 'info':
       console.log(`[${timestamp}][INFO] ${message}`);
       break;
-    case "error":
+    case 'error':
       console.error(`[${timestamp}][ERROR] ${message} ❌ `);
       break;
-    case "warn":
+    case 'warn':
       console.warn(`[${timestamp}][WARN] ${message} ⚠️ `);
       break;
-    case "success":
+    case 'success':
       console.log(`[${timestamp}][SUCCESS] ${message} ✅ `);
       break;
   }

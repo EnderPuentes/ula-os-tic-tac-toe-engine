@@ -1,4 +1,4 @@
-import { BoardSymbol, CellPosition } from "./types";
+import { BoardSymbol, CellPosition } from './types';
 
 /**
  * Get the winnerPlayer line in the board
@@ -7,7 +7,7 @@ import { BoardSymbol, CellPosition } from "./types";
  */
 export function getWinnerLine(
   board: BoardSymbol[][],
-  winnerPlayer: BoardSymbol
+  winnerPlayer: BoardSymbol,
 ): [CellPosition, CellPosition, CellPosition] | null {
   // Check for horizontal wins
   for (let row = 0; row < 3; row++) {
