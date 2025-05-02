@@ -5,7 +5,7 @@ export type Player = {
   symbol: BoardSymbol;
 };
 
-export type Chat = {
+type Chat = {
   playersTyping: Player[];
   messages: Message[];
 };
@@ -16,9 +16,9 @@ export type Message = {
   timestamp: number;
 };
 
-export type RoomStatus = "waiting" | "playing" | "finished" | "done";
+type RoomStatus = 'waiting' | 'playing' | 'finished' | 'done';
 
-export type BoardSymbol = "X" | "O" | null;
+export type BoardSymbol = 'X' | 'O' | null;
 
 export type BoardMove = {
   row: number;
@@ -28,13 +28,13 @@ export type BoardMove = {
 
 export type CellPosition = { row: number; col: number };
 
-export type PlayerResult = {
+type PlayerResult = {
   wins: number;
   losses: number;
   draws: number;
 };
 
-export type Game = {
+type Game = {
   board: BoardSymbol[][];
   currentPlayer: Player | null;
   winnerPlayer: Player | null;
@@ -60,21 +60,21 @@ export type Room = {
 export type WorkerMessageInput = {
   id: string;
   type:
-    | "get-data"
-    | "join-player"
-    | "leave-player"
-    | "send-message"
-    | "player-typing-on-in-chat-of-room"
-    | "player-typing-off-in-chat-of-room"
-    | "player-plays-move-in-board"
-    | "start-game"
-    | "play-again";
+    | 'get-data'
+    | 'join-player'
+    | 'leave-player'
+    | 'send-message'
+    | 'player-typing-on-in-chat-of-room'
+    | 'player-typing-off-in-chat-of-room'
+    | 'player-plays-move-in-board'
+    | 'start-game'
+    | 'play-again';
   socketId: string;
   data: Message | Player | Room | BoardMove | string | null;
 };
 
 export type WorkerMessageOutput = {
   id: string;
-  status: "success" | "error";
+  status: 'success' | 'error';
   data: Room | Player | BoardMove | string | null | Error;
 };
